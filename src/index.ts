@@ -1,3 +1,4 @@
+import { fetchSubtitles } from "./subtitles.ts";
 import { fetchPoToken } from "./token-service.ts";
 
 const PORT = 8081;
@@ -17,6 +18,22 @@ Bun.serve({
 			try {
 				const result = await fetchPoToken(videoId);
 				return Response.json(result);
+			} catch (error) {
+				const message = error instanceof Error ? error.message : "Internal error";
+				return Response.json({ error: message }, { status: 500 });
+			}
+		}
+
+		if (req.method === "GET" && url.pathname === "/subtitles") {
+			const videoId = url.searchParams.get("videoId");
+
+			if (!videoId) {
+				return Response.json({ error: "videoId query parameter is required" }, { status: 400 });
+			}
+
+			try {
+				const tracks = await fetchSubtitles(videoId);
+				return Response.json(tracks);
 			} catch (error) {
 				const message = error instanceof Error ? error.message : "Internal error";
 				return Response.json({ error: message }, { status: 500 });

@@ -43,7 +43,7 @@ async function buildSession(): Promise<CachedSession> {
 	};
 }
 
-async function getOrRefreshSession(): Promise<CachedSession> {
+export async function getOrRefreshSession(): Promise<CachedSession> {
 	if (session === null || Date.now() >= session.expiresAt) {
 		await resetBotGuardPage();
 		session = await buildSession();
