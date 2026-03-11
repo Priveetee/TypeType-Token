@@ -55,6 +55,7 @@ mock.module("../src/innertube.ts", () => ({
 			estimatedTtlSecs: 21600,
 		}),
 	),
+	fetchCaptionTracks: mock(async (_videoId: string) => []),
 }));
 
 let fetchPoToken: (videoId: string) => Promise<TokenResult>;
