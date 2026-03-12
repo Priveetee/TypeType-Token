@@ -38,7 +38,9 @@ const asrTrack = {
 	kind: "asr",
 };
 
-const mockFetchCaptionTracks = mock(async () => [frTrack, asrTrack]);
+const mockFetchCaptionTracks = mock(
+	async (_videoId: string, _visitorData: string, _poToken: string) => [frTrack, asrTrack],
+);
 
 mock.module("../src/innertube.ts", () => ({
 	fetchCaptionTracks: mockFetchCaptionTracks,
