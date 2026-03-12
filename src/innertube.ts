@@ -91,7 +91,11 @@ type PlayerResponse = {
 	};
 };
 
-export async function fetchCaptionTracks(videoId: string): Promise<RawCaptionTrack[]> {
+export async function fetchCaptionTracks(
+	videoId: string,
+	visitorData: string,
+	poToken: string,
+): Promise<RawCaptionTrack[]> {
 	const response = await fetch(
 		`https://www.youtube.com/youtubei/v1/player?key=${INNERTUBE_API_KEY}`,
 		{
@@ -100,6 +104,7 @@ export async function fetchCaptionTracks(videoId: string): Promise<RawCaptionTra
 				"content-type": "application/json",
 				"x-youtube-client-name": ANDROID_VR_CLIENT_NAME_ID,
 				"x-youtube-client-version": ANDROID_VR_CLIENT_VERSION,
+				"x-goog-visitor-id": visitorData,
 				origin: "https://www.youtube.com",
 				"user-agent": ANDROID_VR_USER_AGENT,
 			},
@@ -116,9 +121,11 @@ export async function fetchCaptionTracks(videoId: string): Promise<RawCaptionTra
 						userAgent: ANDROID_VR_USER_AGENT,
 						osName: "Android",
 						osVersion: "12L",
+						visitorData,
 					},
 				},
 				videoId,
+				serviceIntegrityDimensions: { poToken },
 			}),
 		},
 	);
