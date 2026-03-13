@@ -17,6 +17,7 @@ type CachedSession = {
 };
 
 let session: CachedSession | null = null;
+let refreshInFlight: Promise<CachedSession> | null = null;
 
 async function buildSession(): Promise<CachedSession> {
 	const visitorData = await fetchVisitorData();
@@ -44,11 +45,19 @@ async function buildSession(): Promise<CachedSession> {
 }
 
 export async function getOrRefreshSession(): Promise<CachedSession> {
-	if (session === null || Date.now() >= session.expiresAt) {
-		await resetBotGuardPage();
-		session = await buildSession();
+	if (session !== null && Date.now() < session.expiresAt) return session;
+	if (!refreshInFlight) {
+		refreshInFlight = resetBotGuardPage()
+			.then(() => buildSession())
+			.then((s) => {
+				session = s;
+				return s;
+			})
+			.finally(() => {
+				refreshInFlight = null;
+			});
 	}
-	return session;
+	return refreshInFlight;
 }
 
 export async function fetchPoToken(videoId: string): Promise<TokenResult> {

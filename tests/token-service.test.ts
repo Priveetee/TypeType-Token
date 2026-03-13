@@ -66,6 +66,21 @@ describe("fetchPoToken", () => {
 		fetchPoToken = module.fetchPoToken;
 	});
 
+	it("does not call buildSession twice on concurrent requests", async () => {
+		const [r1, r2] = await Promise.all([
+			fetchPoToken("concurrent-1"),
+			fetchPoToken("concurrent-2"),
+		]);
+
+		expect(r1.visitorData).toBe(VISITOR_DATA);
+		expect(r2.visitorData).toBe(VISITOR_DATA);
+		expect(r1.poToken).toBe(`pot-${VISITOR_DATA}`);
+		expect(r2.poToken).toBe(`pot-${VISITOR_DATA}`);
+		expect(r1.streamingPot).toBe("pot-concurrent-1");
+		expect(r2.streamingPot).toBe("pot-concurrent-2");
+		expect(mockExecuteBotGuard.mock.calls.length).toBe(1);
+	});
+
 	it("returns correct token structure on first call", async () => {
 		const result = await fetchPoToken("video-id-1");
 
