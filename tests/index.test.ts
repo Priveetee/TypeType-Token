@@ -1,4 +1,5 @@
 import { describe, expect, it, mock } from "bun:test";
+import type { RawCaptionTrack } from "../src/innertube.ts";
 import type { SubtitleTrack } from "../src/subtitles.ts";
 import type { TokenResult } from "../src/token-service.ts";
 
@@ -12,8 +13,8 @@ mock.module("../src/token-service.ts", () => ({
 	),
 }));
 
-mock.module("../src/subtitles.ts", () => ({
-	fetchSubtitles: mock(async (_videoId: string): Promise<SubtitleTrack[]> => []),
+mock.module("../src/innertube.ts", () => ({
+	fetchCaptionTracks: mock(async (_videoId: string): Promise<RawCaptionTrack[]> => []),
 }));
 
 describe("handler", () => {
