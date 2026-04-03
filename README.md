@@ -32,6 +32,14 @@ Examples:
 | Lint / Format | Biome |
 | Tests | `bun:test` |
 
+## Acknowledgments
+
+Huge thanks to the projects that made this service possible.
+
+- [deniscerri/ytdlnis](https://github.com/deniscerri/ytdlnis) - reference implementation for the BotGuard and PO token flow
+- [LuanRT/BgUtils](https://github.com/LuanRT/BgUtils) - `bgutils-js`, used to parse and solve BotGuard challenges
+- [yt-dlp/yt-dlp](https://github.com/yt-dlp/yt-dlp) - reference for Innertube client behavior and request compatibility
+
 ## License
 
 MIT
