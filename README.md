@@ -4,8 +4,6 @@ The BotGuard PO token microservice for [TypeType-Server](https://github.com/Priv
 
 Generates YouTube Proof-of-Origin tokens via a headless Chromium instance running the BotGuard challenge. Consumed exclusively by TypeType-Server over HTTP on localhost.
 
-Read the [Manifesto](https://github.com/Priveetee/TypeType/blob/main/MANIFESTO.md) to understand the project and the architectural decisions behind this separation.
-
 ## Docker Tags
 
 Container tags are published to GHCR with:
