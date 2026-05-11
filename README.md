@@ -1,43 +1,115 @@
-# TypeType-Token
+<div align="center">
+  <h1>TypeType-Token</h1>
+  <p>YouTube Proof-of-Origin token service for TypeType-Server.</p>
+</div>
 
-The BotGuard PO token microservice for [TypeType-Server](https://github.com/Priveetee/TypeType-Server).
+<div align="center">
 
-Generates YouTube Proof-of-Origin tokens via a headless Chromium instance running the BotGuard challenge. Consumed exclusively by TypeType-Server over HTTP on localhost.
+[![Runtime](https://img.shields.io/badge/runtime-Bun-fbf0df)](https://bun.sh)
+[![BotGuard](https://img.shields.io/badge/botguard-bgutils--js-222222)](https://github.com/LuanRT/BgUtils)
+[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-## Docker Tags
+</div>
 
-Container tags are published to GHCR with:
+TypeType-Token generates YouTube PO tokens for TypeType-Server. The frontend never calls this service directly.
 
-- `latest` on default branch builds
-- `sha-<short-sha>` on every build
-- branch tags (for example `main`)
-- Git tags (for example `v1.2.3`)
-- release tags from `v*` (`v1.2.3` publishes `1.2.3` and `1.2`)
+It runs as a small Bun service inside the TypeType stack and is consumed over HTTP by the backend.
 
-Examples:
+## What this is
 
-- commit `dbc5019` on `main` publishes `sha-dbc5019`, `main`, and `latest`
-- Git tag `v1.2.3` publishes `v1.2.3`, `1.2.3`, and `1.2`
+A dedicated token microservice for the YouTube BotGuard and Proof-of-Origin flow.
+
+It fetches visitor data, solves BotGuard challenges, generates integrity tokens, caches results, and returns PO token data to TypeType-Server.
+
+## What this is not
+
+- Not a public API for browsers.
+- Not a frontend dependency.
+- Not an extraction service.
+- Not a general YouTube client.
 
 ## Stack
 
 | Role | Tool |
 |---|---|
-| Runtime / Package manager | Bun |
+| Runtime | Bun |
 | HTTP server | `Bun.serve()` |
-| BotGuard execution | Playwright (Chromium headless) |
-| BotGuard challenge parsing | `bgutils-js` |
-| Lint / Format | Biome |
+| BotGuard challenge | `bgutils-js` |
+| Browser runtime | Playwright Chromium |
+| Cache | Bun Redis client with Dragonfly |
 | Tests | `bun:test` |
+| Lint and format | Biome |
+
+## API
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/potoken?videoId=<id>` | Returns PO token data for one YouTube video ID |
+
+Response shape:
+
+```json
+{
+  "poToken": "...",
+  "visitorData": "...",
+  "streamingPot": "..."
+}
+```
+
+Errors return HTTP `500` with:
+
+```json
+{ "error": "descriptive message" }
+```
+
+## Runtime
+
+Run from source:
+
+```bash
+bun run src/index.ts
+```
+
+Build and run the production bundle:
+
+```bash
+bun build src/index.ts --outfile dist/index.js --target bun
+bun dist/index.js
+```
+
+The service listens on port `8081`.
+
+## Development
+
+```bash
+bun install
+bun test
+bun run lint
+```
+
+## Docker tags
+
+Container tags are published to GHCR with:
+
+| Tag | Source |
+|---|---|
+| `latest` | Default branch builds |
+| `sha-<short-sha>` | Every build |
+| `main` | Main branch |
+| `v*` | Git release tags |
+
+## Related projects
+
+- [TypeType](https://github.com/Priveetee/TypeType) is the deployment stack.
+- [TypeType-Server](https://github.com/Priveetee/TypeType-Server) calls this service for token data.
+- [TypeType web](https://github.com/Priveetee/TypeType) never calls this service directly.
 
 ## Acknowledgments
 
-Huge thanks to the projects that made this service possible.
-
-- [deniscerri/ytdlnis](https://github.com/deniscerri/ytdlnis) - reference implementation for the BotGuard and PO token flow
-- [LuanRT/BgUtils](https://github.com/LuanRT/BgUtils) - `bgutils-js`, used to parse and solve BotGuard challenges
-- [yt-dlp/yt-dlp](https://github.com/yt-dlp/yt-dlp) - reference for Innertube client behavior and request compatibility
+- [deniscerri/ytdlnis](https://github.com/deniscerri/ytdlnis) for the BotGuard and PO token reference flow.
+- [LuanRT/BgUtils](https://github.com/LuanRT/BgUtils) for `bgutils-js`.
+- [yt-dlp](https://github.com/yt-dlp/yt-dlp) for Innertube compatibility references.
 
 ## License
 
-MIT
+MIT. See [LICENSE](LICENSE).
