@@ -1,4 +1,5 @@
 <div align="center">
+  <img src="https://raw.githubusercontent.com/Priveetee/TypeType/main/assets/banner.svg" alt="TypeType" width="100%">
   <h1>TypeType-Token</h1>
   <p>YouTube Proof-of-Origin token service for TypeType-Server.</p>
 </div>
