@@ -5,7 +5,7 @@
   "license": "MIT",
   "scripts": {
     "start": "bun run src/index.ts",
-    "build": "bun build src/index.ts --outfile dist/index.js --target bun",
+    "build": "bun build src/index.ts --outfile dist/index.js --target bun --external playwright",
     "test": "bun test",
     "lint": "biome check src tests",
     "format": "biome format --write src tests"

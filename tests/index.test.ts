@@ -15,6 +15,9 @@ mock.module("../src/token-service.ts", () => ({
 
 mock.module("../src/innertube.ts", () => ({
 	fetchCaptionTracks: mock(async (_videoId: string): Promise<RawCaptionTrack[]> => []),
+	fetchVisitorData: mock(async (): Promise<string> => "visitor-data"),
+	fetchChallenge: mock(async () => ({})),
+	fetchIntegrityToken: mock(async () => ({ integrityToken: "integrity-token" })),
 }));
 
 describe("handler", () => {
