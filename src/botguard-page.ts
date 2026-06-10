@@ -1,5 +1,5 @@
-import { chromium } from "playwright";
 import type { Browser, Page } from "playwright";
+import { chromium } from "playwright";
 
 const ROUTE = "https://www.youtube.com/__bgp__";
 const BLANK_HTML = "<!DOCTYPE html><html><body></body></html>";
