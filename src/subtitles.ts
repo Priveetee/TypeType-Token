@@ -1,5 +1,5 @@
-import { fetchCaptionTracks } from "./innertube.ts";
 import type { RawCaptionTrack } from "./innertube.ts";
+import { fetchCaptionTracks } from "./innertube.ts";
 import { fetchPoToken } from "./token-service.ts";
 
 export type SubtitleTrack = {

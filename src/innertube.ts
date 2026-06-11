@@ -1,5 +1,5 @@
-import { BG } from "bgutils-js";
 import type { DescrambledChallenge, IntegrityTokenData } from "bgutils-js";
+import { BG } from "bgutils-js";
 
 const INNERTUBE_API_KEY = "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8";
 const WAA_API_KEY = "AIzaSyDyT5W0Jh49F30Pqqtyfdf7pDLFKLJoAnw";

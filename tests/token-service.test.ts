@@ -62,7 +62,7 @@ let fetchPoToken: (videoId: string) => Promise<TokenResult>;
 
 describe("fetchPoToken", () => {
 	beforeAll(async () => {
-		const module = await import("../src/token-service.ts");
+		const module = await import("../src/token-service.ts?token-service-test");
 		fetchPoToken = module.fetchPoToken;
 	});
 
