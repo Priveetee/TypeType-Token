@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it, mock } from "bun:test";
-import type { DescrambledChallenge, IntegrityTokenData } from "bgutils-js";
+import type { IntegrityTokenData } from "bgutils-js";
 import type { TokenResult } from "../src/token-service.ts";
 
 const VISITOR_DATA = "visitor-data-test-123";
@@ -18,37 +18,16 @@ mock.module("../src/botguard-page.ts", () => ({
 	resetBotGuardPage: mockResetBotGuardPage,
 }));
 
-mock.module("bgutils-js", () => ({
-	BG: {
-		Challenge: {
-			parseChallengeData: mock(
-				(_raw: unknown): DescrambledChallenge => ({
-					interpreterJavascript: {
-						privateDoNotAccessOrElseSafeScriptWrappedValue: "/* noop */",
-						privateDoNotAccessOrElseTrustedResourceUrlWrappedValue: null,
-					},
-					interpreterHash: "hash-test",
-					program: "program-test",
-					globalName: "vm_test",
-				}),
-			),
-		},
-	},
+mock.module("../src/botguard-challenge.ts", () => ({
+	fetchChallenge: mock(async (_visitorData: string) => ({
+		interpreterScript: "/* noop */",
+		program: "program-test",
+		globalName: "vm_test",
+	})),
 }));
 
 mock.module("../src/innertube.ts", () => ({
 	fetchVisitorData: mock(async (): Promise<string> => VISITOR_DATA),
-	fetchChallenge: mock(
-		async (): Promise<DescrambledChallenge> => ({
-			interpreterJavascript: {
-				privateDoNotAccessOrElseSafeScriptWrappedValue: "/* noop */",
-				privateDoNotAccessOrElseTrustedResourceUrlWrappedValue: null,
-			},
-			interpreterHash: "hash-test",
-			program: "program-test",
-			globalName: "vm_test",
-		}),
-	),
 	fetchIntegrityToken: mock(
 		async (_response: string): Promise<IntegrityTokenData> => ({
 			integrityToken: INTEGRITY_TOKEN,

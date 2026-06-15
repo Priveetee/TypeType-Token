@@ -1,5 +1,4 @@
-import type { DescrambledChallenge, IntegrityTokenData } from "bgutils-js";
-import { BG } from "bgutils-js";
+import type { IntegrityTokenData } from "bgutils-js";
 
 const INNERTUBE_API_KEY = "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8";
 const WAA_API_KEY = "AIzaSyDyT5W0Jh49F30Pqqtyfdf7pDLFKLJoAnw";
@@ -53,27 +52,6 @@ export async function fetchVisitorData(): Promise<string> {
 	}
 
 	return visitorData;
-}
-
-export async function fetchChallenge(): Promise<DescrambledChallenge> {
-	const response = await fetch(`${WAA_BASE_URL}/Create`, {
-		method: "POST",
-		headers: WAA_HEADERS,
-		body: JSON.stringify([REQUEST_KEY]),
-	});
-
-	if (!response.ok) {
-		throw new Error(`WAA Create request failed: ${response.status}`);
-	}
-
-	const rawJson: unknown = await response.json();
-	const challenge = BG.Challenge.parseChallengeData(rawJson as Record<string, unknown>);
-
-	if (!challenge) {
-		throw new Error("BotGuard challenge parsing returned undefined");
-	}
-
-	return challenge;
 }
 
 export type RawCaptionTrack = {
