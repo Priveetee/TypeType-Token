@@ -20,7 +20,7 @@ export function remoteLoginTestConfig(
 		browserChannel: null,
 		browserExecutablePath: null,
 		locale: "en-US",
-		probeVideoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+		probeVideoUrl: "https://music.youtube.com/watch?v=09839DpTctU",
 		potTimeoutMs: 10_000,
 		maxFrameBytes: 524_288,
 		maxBufferedBytes: 524_288,

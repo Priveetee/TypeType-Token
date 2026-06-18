@@ -64,8 +64,8 @@ function originValue(value: string | undefined): string | null {
 function probeUrl(env: Env): string {
 	const raw = env.YOUTUBE_REMOTE_LOGIN_PROBE_URL?.trim();
 	if (raw) return raw;
-	const id = env.YOUTUBE_REMOTE_LOGIN_PROBE_VIDEO_ID?.trim() || "dQw4w9WgXcQ";
-	return `https://www.youtube.com/watch?v=${encodeURIComponent(id)}`;
+	const id = env.YOUTUBE_REMOTE_LOGIN_PROBE_VIDEO_ID?.trim() || "09839DpTctU";
+	return `https://music.youtube.com/watch?v=${encodeURIComponent(id)}`;
 }
 
 export function readRemoteLoginConfig(env: Env = Bun.env): RemoteLoginConfig {

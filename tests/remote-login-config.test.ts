@@ -30,6 +30,12 @@ describe("remote login config", () => {
 		expect(config.locale).toBe("fr-FR");
 	});
 
+	it("uses the YouTube Music probe by default", () => {
+		const config = readRemoteLoginConfig({});
+
+		expect(config.probeVideoUrl).toBe("https://music.youtube.com/watch?v=09839DpTctU");
+	});
+
 	it("authorizes only the configured internal token header", () => {
 		const config = readRemoteLoginConfig({
 			YOUTUBE_REMOTE_LOGIN_ENABLED: "true",
