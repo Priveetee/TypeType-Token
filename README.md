@@ -136,7 +136,9 @@ Container tags are published to GHCR with:
 
 | Tag | Source |
 |---|---|
-| `latest` | Default branch builds |
+| `latest` | Main branch builds |
+| `beta` | Dev branch beta builds |
+| `ghcr.io/priveetee/typetype-token-beta:latest` | Dev branch beta image |
 | `sha-<short-sha>` | Every build |
 | `main` | Main branch |
 | `v*` | Git release tags |
