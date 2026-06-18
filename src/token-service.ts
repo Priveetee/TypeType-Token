@@ -1,5 +1,6 @@
+import { fetchChallenge } from "./botguard-challenge.ts";
 import { executeBotGuard, mintPoToken, resetBotGuardPage } from "./botguard-page.ts";
-import { fetchChallenge, fetchIntegrityToken, fetchVisitorData } from "./innertube.ts";
+import { fetchIntegrityToken, fetchVisitorData } from "./innertube.ts";
 
 const EXPIRY_MARGIN_MS = 10 * 60 * 1000;
 
@@ -21,12 +22,13 @@ let refreshInFlight: Promise<CachedSession> | null = null;
 
 async function buildSession(): Promise<CachedSession> {
 	const visitorData = await fetchVisitorData();
-	const challenge = await fetchChallenge();
+	const challenge = await fetchChallenge(visitorData);
 
-	const script = challenge.interpreterJavascript.privateDoNotAccessOrElseSafeScriptWrappedValue;
-	if (!script) throw new Error("BotGuard interpreter script is null");
-
-	const botguardResponse = await executeBotGuard(script, challenge.program, challenge.globalName);
+	const botguardResponse = await executeBotGuard(
+		challenge.interpreterScript,
+		challenge.program,
+		challenge.globalName,
+	);
 	const integrityTokenData = await fetchIntegrityToken(botguardResponse);
 
 	if (!integrityTokenData.integrityToken) {

@@ -19,4 +19,6 @@ COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 EXPOSE 8081
 ENV NODE_ENV=production
-CMD ["bun", "dist/index.js"]
+ENV YOUTUBE_REMOTE_LOGIN_HEADLESS=false
+ENV YOUTUBE_REMOTE_LOGIN_DISABLE_AUTOMATION_CONTROLLED=true
+CMD ["xvfb-run", "-a", "-s", "-screen 0 1920x1080x24", "bun", "dist/index.js"]
