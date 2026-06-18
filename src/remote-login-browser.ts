@@ -47,9 +47,26 @@ export type RemoteLoginPage = {
 	hasLoginCookie: () => Promise<boolean>;
 };
 
-async function ensureRemoteBrowser(): Promise<Browser> {
+function launchArgs(config: RemoteLoginConfig): string[] {
+	const args = ["--disable-dev-shm-usage"];
+	if (config.disableAutomationControlled) {
+		args.push("--disable-blink-features=AutomationControlled");
+	}
+	return args;
+}
+
+function launchOptions(config: RemoteLoginConfig): Parameters<typeof chromium.launch>[0] {
+	return {
+		headless: config.headless,
+		args: launchArgs(config),
+		channel: config.browserChannel ?? undefined,
+		executablePath: config.browserExecutablePath ?? undefined,
+	};
+}
+
+async function ensureRemoteBrowser(config: RemoteLoginConfig): Promise<Browser> {
 	if (remoteBrowser?.isConnected()) return remoteBrowser;
-	remoteBrowser = await chromium.launch({ headless: true });
+	remoteBrowser = await chromium.launch(launchOptions(config));
 	return remoteBrowser;
 }
 
@@ -105,12 +122,13 @@ export async function createRemoteLoginPage(
 	config: RemoteLoginConfig,
 	onPoToken: (poToken: string) => void,
 ): Promise<RemoteLoginPage> {
-	const browser = await ensureRemoteBrowser();
+	const browser = await ensureRemoteBrowser(config);
 	const context = await browser.newContext({
 		acceptDownloads: false,
 		viewport: { width: config.viewportWidth, height: config.viewportHeight },
-		deviceScaleFactor: 1,
+		deviceScaleFactor: config.deviceScaleFactor,
 		userAgent: config.userAgent,
+		locale: config.locale,
 	});
 	const page = await context.newPage();
 	page.on("request", (request) => {

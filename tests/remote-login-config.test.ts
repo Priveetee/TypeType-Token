@@ -14,6 +14,9 @@ describe("remote login config", () => {
 			YOUTUBE_REMOTE_LOGIN_TTL_MS: "900000",
 			YOUTUBE_REMOTE_LOGIN_FRAME_FPS: "999",
 			YOUTUBE_REMOTE_LOGIN_CALLBACK_ORIGIN: "http://localhost:8080/internal",
+			YOUTUBE_REMOTE_LOGIN_HEADLESS: "false",
+			YOUTUBE_REMOTE_LOGIN_BROWSER_CHANNEL: "chrome",
+			YOUTUBE_REMOTE_LOGIN_LOCALE: "fr-FR",
 		});
 
 		expect(config.enabled).toBe(true);
@@ -21,6 +24,10 @@ describe("remote login config", () => {
 		expect(config.ttlMs).toBe(600_000);
 		expect(config.frameIntervalMs).toBe(50);
 		expect(config.callbackOrigin).toBe("http://localhost:8080");
+		expect(config.headless).toBe(false);
+		expect(config.disableAutomationControlled).toBe(true);
+		expect(config.browserChannel).toBe("chrome");
+		expect(config.locale).toBe("fr-FR");
 	});
 
 	it("authorizes only the configured internal token header", () => {
