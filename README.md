@@ -12,7 +12,7 @@
 
 </div>
 
-TypeType-Token generates YouTube PO tokens for TypeType-Server. The frontend never calls this service directly.
+TypeType-Token generates YouTube PO tokens and disposable YouTube login sessions for TypeType-Server. The frontend never calls this service directly.
 
 It runs as a small Bun service inside the TypeType stack and is consumed over HTTP by the backend.
 
@@ -20,7 +20,7 @@ It runs as a small Bun service inside the TypeType stack and is consumed over HT
 
 A dedicated token microservice for the YouTube BotGuard and Proof-of-Origin flow.
 
-It fetches visitor data, solves BotGuard challenges, generates integrity tokens, caches results, and returns PO token data to TypeType-Server.
+It fetches visitor data, runs BotGuard inside Playwright Chromium, generates integrity tokens, caches the browser attestation in memory, and returns PO token data to TypeType-Server.
 
 ## What this is not
 
@@ -35,9 +35,9 @@ It fetches visitor data, solves BotGuard challenges, generates integrity tokens,
 |---|---|
 | Runtime | Bun |
 | HTTP server | `Bun.serve()` |
-| BotGuard challenge | `bgutils-js` |
 | Browser runtime | Playwright Chromium |
-| Cache | Bun Redis client with Dragonfly |
+| BotGuard compatibility types | `bgutils-js` |
+| Cache | In-memory process cache |
 | Tests | `bun:test` |
 | Lint and format | Biome |
 
@@ -46,6 +46,7 @@ It fetches visitor data, solves BotGuard challenges, generates integrity tokens,
 | Method | Path | Description |
 |---|---|---|
 | `GET` | `/potoken?videoId=<id>` | Returns PO token data for one YouTube video ID |
+| `GET` | `/subtitles?videoId=<id>` | Returns YouTube caption tracks with PO token injection |
 
 Response shape:
 
@@ -61,6 +62,47 @@ Errors return HTTP `500` with:
 
 ```json
 { "error": "descriptive message" }
+```
+
+## Internal remote login
+
+Remote login is disabled by default and is only for TypeType-Server.
+
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/youtube-remote-login/start` | Starts one disposable Chromium context |
+| `GET` | `/youtube-remote-login/{sessionId}` | Internal WebSocket for frames and inputs |
+| `DELETE` | `/youtube-remote-login/{sessionId}` | Cancels and destroys the context |
+
+All remote login calls require:
+
+```text
+X-Internal-Token: <shared secret>
+```
+
+Start request:
+
+```json
+{
+  "serverSessionId": "...",
+  "userId": "...",
+  "callbackUrl": "http://typetype-server/internal/callback",
+  "ttlMs": 480000
+}
+```
+
+Completion is posted back to `callbackUrl` with cookies in Netscape format and the captured `poToken`. Cookies and `poToken` are not sent through the WebSocket.
+
+Remote login env:
+
+```text
+YOUTUBE_REMOTE_LOGIN_ENABLED=true
+YOUTUBE_REMOTE_LOGIN_INTERNAL_TOKEN=<shared secret>
+YOUTUBE_REMOTE_LOGIN_CALLBACK_ORIGIN=http://localhost:8080
+YOUTUBE_REMOTE_LOGIN_MAX_SESSIONS=2
+YOUTUBE_REMOTE_LOGIN_FRAME_FPS=10
+YOUTUBE_REMOTE_LOGIN_MAX_FRAME_BYTES=524288
+YOUTUBE_REMOTE_LOGIN_USER_AGENT=<optional Chrome UA>
 ```
 
 ## Runtime
