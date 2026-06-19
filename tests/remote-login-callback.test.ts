@@ -4,6 +4,18 @@ import { REMOTE_LOGIN_INTERNAL_HEADER } from "../src/remote-login-config.ts";
 import { remoteLoginTarget, remoteLoginTestConfig } from "./remote-login-fixtures.ts";
 
 describe("sendRemoteLoginCompletion", () => {
+	it("returns false when the internal token is missing", async () => {
+		const ok = await sendRemoteLoginCompletion(
+			remoteLoginTarget(),
+			"token-session",
+			"# Netscape HTTP Cookie File",
+			"captured-pot",
+			remoteLoginTestConfig({ internalToken: null }),
+		);
+
+		expect(ok).toBe(false);
+	});
+
 	it("posts the completion payload to TypeType-Server", async () => {
 		let header: string | null = null;
 		let payload: { sessionId: string; tokenSessionId: string; status: string } | null = null;
