@@ -37,6 +37,20 @@ describe("remote login routes", () => {
 		expect(res?.status).toBe(404);
 	});
 
+	it("returns 503 when the internal token is missing", async () => {
+		const config = remoteLoginTestConfig({ internalToken: null });
+		const manager = new RemoteLoginManager(config, async () => fakeRemoteLoginPage());
+		const handler = createRemoteLoginHandler(manager, config);
+		const res = await handler(
+			startRequest(startBody("user-1")),
+			new URL("http://localhost:8081/youtube-remote-login/start"),
+		);
+		const body = (await res?.json()) as { error: string };
+
+		expect(res?.status).toBe(503);
+		expect(body.error).toBe("remote login internal token is not configured");
+	});
+
 	it("rejects missing or wrong internal tokens", async () => {
 		const config = remoteLoginTestConfig();
 		const manager = new RemoteLoginManager(config, async () => fakeRemoteLoginPage());
