@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 export const REMOTE_LOGIN_INTERNAL_HEADER = "x-internal-token";
 
 export type RemoteLoginConfig = {
@@ -29,6 +31,10 @@ type Env = Record<string, string | undefined>;
 
 const DEFAULT_REMOTE_LOGIN_USER_AGENT =
 	"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
+const PLACEHOLDER_VALUES = new Set([
+	"SET_ME_SHARED_SECRET",
+	"SET_ME_YOUTUBE_REMOTE_LOGIN_INTERNAL_TOKEN",
+]);
 
 function boolValue(value: string | undefined): boolean {
 	return value === "1" || value?.toLowerCase() === "true";
@@ -61,6 +67,23 @@ function originValue(value: string | undefined): string | null {
 	}
 }
 
+function textValue(value: string | undefined): string | null {
+	const trimmed = value?.trim();
+	return trimmed && !PLACEHOLDER_VALUES.has(trimmed) ? trimmed : null;
+}
+
+function secretValue(env: Env, name: string): string | null {
+	const direct = textValue(env[name]);
+	if (direct) return direct;
+	const filePath = textValue(env[`${name}_FILE`]);
+	if (!filePath) return null;
+	try {
+		return textValue(readFileSync(filePath, "utf8"));
+	} catch {
+		return null;
+	}
+}
+
 function probeUrl(env: Env): string {
 	const raw = env.YOUTUBE_REMOTE_LOGIN_PROBE_URL?.trim();
 	if (raw) return raw;
@@ -72,7 +95,7 @@ export function readRemoteLoginConfig(env: Env = Bun.env): RemoteLoginConfig {
 	const fps = boundedNumber(env.YOUTUBE_REMOTE_LOGIN_FRAME_FPS, 10, 1, 20);
 	return {
 		enabled: boolValue(env.YOUTUBE_REMOTE_LOGIN_ENABLED),
-		internalToken: env.YOUTUBE_REMOTE_LOGIN_INTERNAL_TOKEN?.trim() || null,
+		internalToken: secretValue(env, "YOUTUBE_REMOTE_LOGIN_INTERNAL_TOKEN"),
 		ttlMs: boundedNumber(env.YOUTUBE_REMOTE_LOGIN_TTL_MS, 480_000, 300_000, 600_000),
 		frameIntervalMs: Math.max(Math.trunc(1000 / fps), 50),
 		jpegQuality: boundedNumber(env.YOUTUBE_REMOTE_LOGIN_JPEG_QUALITY, 60, 35, 80),
