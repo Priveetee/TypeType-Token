@@ -1,4 +1,7 @@
 import { describe, expect, it } from "bun:test";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
 	isRemoteLoginAuthorized,
 	isRemoteLoginCallbackAllowed,
@@ -47,6 +50,34 @@ describe("remote login config", () => {
 
 		expect(isRemoteLoginAuthorized(req, config)).toBe(true);
 		expect(isRemoteLoginAuthorized(new Request("http://localhost"), config)).toBe(false);
+	});
+
+	it("reads the internal token from a file env value", () => {
+		const dir = mkdtempSync(join(tmpdir(), "typetype-token-"));
+		const file = join(dir, "internal-token");
+		writeFileSync(file, " file-secret \n");
+
+		const config = readRemoteLoginConfig({
+			YOUTUBE_REMOTE_LOGIN_ENABLED: "true",
+			YOUTUBE_REMOTE_LOGIN_INTERNAL_TOKEN_FILE: file,
+		});
+
+		expect(config.internalToken).toBe("file-secret");
+		rmSync(dir, { recursive: true, force: true });
+	});
+
+	it("ignores placeholder internal token env values", () => {
+		const dir = mkdtempSync(join(tmpdir(), "typetype-token-"));
+		const file = join(dir, "internal-token");
+		writeFileSync(file, " generated-secret \n");
+
+		const config = readRemoteLoginConfig({
+			YOUTUBE_REMOTE_LOGIN_INTERNAL_TOKEN: "SET_ME_YOUTUBE_REMOTE_LOGIN_INTERNAL_TOKEN",
+			YOUTUBE_REMOTE_LOGIN_INTERNAL_TOKEN_FILE: file,
+		});
+
+		expect(config.internalToken).toBe("generated-secret");
+		rmSync(dir, { recursive: true, force: true });
 	});
 
 	it("allows callback URLs only on the configured origin", () => {
