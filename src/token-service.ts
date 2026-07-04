@@ -17,6 +17,8 @@ type CachedSession = {
 	visitorBoundPoToken: string;
 	integrityToken: string;
 	expiresAt: number;
+	videoBoundPoTokens: Map<string, string>;
+	videoBoundPoTokenRequests: Map<string, Promise<string>>;
 };
 
 let session: CachedSession | null = null;
@@ -47,7 +49,26 @@ async function buildSession(): Promise<CachedSession> {
 		visitorBoundPoToken,
 		integrityToken: integrityTokenData.integrityToken,
 		expiresAt: Date.now() + ttlMs - EXPIRY_MARGIN_MS,
+		videoBoundPoTokens: new Map(),
+		videoBoundPoTokenRequests: new Map(),
 	};
+}
+
+async function getVideoBoundPoToken(s: CachedSession, videoId: string): Promise<string> {
+	const cached = s.videoBoundPoTokens.get(videoId);
+	if (cached !== undefined) return cached;
+
+	const inFlight = s.videoBoundPoTokenRequests.get(videoId);
+	if (inFlight !== undefined) return inFlight;
+
+	const request = mintPoToken(s.integrityToken, videoId)
+		.then((token) => {
+			s.videoBoundPoTokens.set(videoId, token);
+			return token;
+		})
+		.finally(() => s.videoBoundPoTokenRequests.delete(videoId));
+	s.videoBoundPoTokenRequests.set(videoId, request);
+	return request;
 }
 
 function startSessionRefresh(forceRefresh: boolean): Promise<CachedSession> {
@@ -83,9 +104,9 @@ export async function getOrRefreshSession(forceRefresh = false): Promise<CachedS
 }
 
 export async function fetchPoToken(videoId: string, forceRefresh = false): Promise<TokenResult> {
-	const { integrityToken, visitorData, visitorBoundPoToken } =
-		await getOrRefreshSession(forceRefresh);
-	const videoBoundPoToken = await mintPoToken(integrityToken, videoId);
+	const currentSession = await getOrRefreshSession(forceRefresh);
+	const { visitorData, visitorBoundPoToken } = currentSession;
+	const videoBoundPoToken = await getVideoBoundPoToken(currentSession, videoId);
 	return {
 		visitorData,
 		visitorBoundPoToken,

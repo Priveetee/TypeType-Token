@@ -109,6 +109,30 @@ describe("fetchPoToken", () => {
 		expect(result1.streamingPot).not.toBe(result2.streamingPot);
 	});
 
+	it("reuses cached videoBoundPoToken for the same videoId", async () => {
+		const callsBefore = mockMintPoToken.mock.calls.length;
+
+		const result1 = await fetchPoToken("video-cache");
+		const result2 = await fetchPoToken("video-cache");
+
+		expect(result1.videoBoundPoToken).toBe("pot-video-cache");
+		expect(result2.videoBoundPoToken).toBe("pot-video-cache");
+		expect(mockMintPoToken.mock.calls.length).toBe(callsBefore + 1);
+	});
+
+	it("deduplicates concurrent videoBoundPoToken mints for the same videoId", async () => {
+		const callsBefore = mockMintPoToken.mock.calls.length;
+
+		const [result1, result2] = await Promise.all([
+			fetchPoToken("video-concurrent-cache"),
+			fetchPoToken("video-concurrent-cache"),
+		]);
+
+		expect(result1.videoBoundPoToken).toBe("pot-video-concurrent-cache");
+		expect(result2.videoBoundPoToken).toBe("pot-video-concurrent-cache");
+		expect(mockMintPoToken.mock.calls.length).toBe(callsBefore + 1);
+	});
+
 	it("preserves visitorData and visitorBoundPoToken across requests", async () => {
 		const result = await fetchPoToken("video-id-3");
 
