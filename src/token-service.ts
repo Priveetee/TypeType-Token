@@ -5,20 +5,24 @@ import { fetchIntegrityToken, fetchVisitorData } from "./innertube.ts";
 const EXPIRY_MARGIN_MS = 10 * 60 * 1000;
 
 export type TokenResult = {
-	poToken: string;
 	visitorData: string;
+	visitorBoundPoToken: string;
+	videoBoundPoToken: string;
+	poToken: string;
 	streamingPot: string;
 };
 
 type CachedSession = {
 	visitorData: string;
-	poToken: string;
+	visitorBoundPoToken: string;
 	integrityToken: string;
 	expiresAt: number;
 };
 
 let session: CachedSession | null = null;
 let refreshInFlight: Promise<CachedSession> | null = null;
+let forcedRefreshInFlight: Promise<CachedSession> | null = null;
+let refreshGeneration = 0;
 
 async function buildSession(): Promise<CachedSession> {
 	const visitorData = await fetchVisitorData();
@@ -35,35 +39,58 @@ async function buildSession(): Promise<CachedSession> {
 		throw new Error("integrityToken missing from GenerateIT response");
 	}
 
-	const poToken = await mintPoToken(integrityTokenData.integrityToken, visitorData);
+	const visitorBoundPoToken = await mintPoToken(integrityTokenData.integrityToken, visitorData);
 	const ttlMs = (integrityTokenData.estimatedTtlSecs ?? 21600) * 1000;
 
 	return {
 		visitorData,
-		poToken,
+		visitorBoundPoToken,
 		integrityToken: integrityTokenData.integrityToken,
 		expiresAt: Date.now() + ttlMs - EXPIRY_MARGIN_MS,
 	};
 }
 
-export async function getOrRefreshSession(): Promise<CachedSession> {
-	if (session !== null && Date.now() < session.expiresAt) return session;
-	if (!refreshInFlight) {
-		refreshInFlight = resetBotGuardPage()
-			.then(() => buildSession())
-			.then((s) => {
-				session = s;
-				return s;
-			})
-			.finally(() => {
+function startSessionRefresh(forceRefresh: boolean): Promise<CachedSession> {
+	const generation = ++refreshGeneration;
+	const promise = resetBotGuardPage()
+		.then(() => buildSession())
+		.then((s) => {
+			if (generation === refreshGeneration) session = s;
+			return s;
+		})
+		.finally(() => {
+			if (forceRefresh) {
+				forcedRefreshInFlight = null;
+			} else {
 				refreshInFlight = null;
-			});
+			}
+		});
+
+	if (forceRefresh) {
+		forcedRefreshInFlight = promise;
+	} else {
+		refreshInFlight = promise;
 	}
-	return refreshInFlight;
+
+	return promise;
 }
 
-export async function fetchPoToken(videoId: string): Promise<TokenResult> {
-	const { integrityToken, visitorData, poToken } = await getOrRefreshSession();
-	const streamingPot = await mintPoToken(integrityToken, videoId);
-	return { poToken, visitorData, streamingPot };
+export async function getOrRefreshSession(forceRefresh = false): Promise<CachedSession> {
+	if (!forceRefresh && session !== null && Date.now() < session.expiresAt) return session;
+	if (forceRefresh) return forcedRefreshInFlight ?? startSessionRefresh(true);
+	if (forcedRefreshInFlight) return forcedRefreshInFlight;
+	return refreshInFlight ?? startSessionRefresh(false);
+}
+
+export async function fetchPoToken(videoId: string, forceRefresh = false): Promise<TokenResult> {
+	const { integrityToken, visitorData, visitorBoundPoToken } =
+		await getOrRefreshSession(forceRefresh);
+	const videoBoundPoToken = await mintPoToken(integrityToken, videoId);
+	return {
+		visitorData,
+		visitorBoundPoToken,
+		videoBoundPoToken,
+		poToken: visitorBoundPoToken,
+		streamingPot: videoBoundPoToken,
+	};
 }

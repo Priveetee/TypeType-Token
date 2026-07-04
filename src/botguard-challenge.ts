@@ -1,4 +1,4 @@
-const WEB_CLIENT_VERSION = "2.20260114.01.00";
+export const WEB_CLIENT_VERSION = "2.20260630.03.00";
 const ATT_GET_URL = "https://www.youtube.com/youtubei/v1/att/get?prettyPrint=false&alt=json";
 
 type AttGetChallenge = {

@@ -4,6 +4,7 @@ import type { TokenResult } from "../src/token-service.ts";
 
 const VISITOR_DATA = "visitor-data-test-123";
 const INTEGRITY_TOKEN = "integrity-token-test-xyz";
+let currentVisitorData = VISITOR_DATA;
 
 const mockExecuteBotGuard = mock(
 	async (_script: string, _prog: string, _name: string): Promise<string> =>
@@ -27,7 +28,7 @@ mock.module("../src/botguard-challenge.ts", () => ({
 }));
 
 mock.module("../src/innertube.ts", () => ({
-	fetchVisitorData: mock(async (): Promise<string> => VISITOR_DATA),
+	fetchVisitorData: mock(async (): Promise<string> => currentVisitorData),
 	fetchIntegrityToken: mock(
 		async (_response: string): Promise<IntegrityTokenData> => ({
 			integrityToken: INTEGRITY_TOKEN,
@@ -37,7 +38,7 @@ mock.module("../src/innertube.ts", () => ({
 	fetchCaptionTracks: mock(async (_videoId: string, _visitorData: string, _poToken: string) => []),
 }));
 
-let fetchPoToken: (videoId: string) => Promise<TokenResult>;
+let fetchPoToken: (videoId: string, forceRefresh?: boolean) => Promise<TokenResult>;
 
 describe("fetchPoToken", () => {
 	beforeAll(async () => {
@@ -53,6 +54,10 @@ describe("fetchPoToken", () => {
 
 		expect(r1.visitorData).toBe(VISITOR_DATA);
 		expect(r2.visitorData).toBe(VISITOR_DATA);
+		expect(r1.visitorBoundPoToken).toBe(`pot-${VISITOR_DATA}`);
+		expect(r2.visitorBoundPoToken).toBe(`pot-${VISITOR_DATA}`);
+		expect(r1.videoBoundPoToken).toBe("pot-concurrent-1");
+		expect(r2.videoBoundPoToken).toBe("pot-concurrent-2");
 		expect(r1.poToken).toBe(`pot-${VISITOR_DATA}`);
 		expect(r2.poToken).toBe(`pot-${VISITOR_DATA}`);
 		expect(r1.streamingPot).toBe("pot-concurrent-1");
@@ -64,6 +69,8 @@ describe("fetchPoToken", () => {
 		const result = await fetchPoToken("video-id-1");
 
 		expect(result.visitorData).toBe(VISITOR_DATA);
+		expect(result.visitorBoundPoToken).toBe(`pot-${VISITOR_DATA}`);
+		expect(result.videoBoundPoToken).toBe("pot-video-id-1");
 		expect(result.poToken).toBe(`pot-${VISITOR_DATA}`);
 		expect(result.streamingPot).toBe("pot-video-id-1");
 		expect(mockExecuteBotGuard.mock.calls.length).toBe(1);
@@ -77,19 +84,36 @@ describe("fetchPoToken", () => {
 		expect(mockExecuteBotGuard.mock.calls.length).toBe(callsBefore);
 	});
 
-	it("mints a distinct streamingPot per videoId", async () => {
+	it("refreshes the BotGuard session when requested", async () => {
+		const callsBefore = mockExecuteBotGuard.mock.calls.length;
+		const refreshedVisitorData = `${VISITOR_DATA}-refresh`;
+		currentVisitorData = refreshedVisitorData;
+
+		const result = await fetchPoToken("video-id-refresh", true);
+
+		expect(mockExecuteBotGuard.mock.calls.length).toBe(callsBefore + 1);
+		expect(result.visitorData).toBe(refreshedVisitorData);
+		expect(result.visitorBoundPoToken).toBe(`pot-${refreshedVisitorData}`);
+		expect(result.videoBoundPoToken).toBe("pot-video-id-refresh");
+	});
+
+	it("mints a distinct videoBoundPoToken per videoId", async () => {
 		const result1 = await fetchPoToken("video-alpha");
 		const result2 = await fetchPoToken("video-beta");
 
+		expect(result1.videoBoundPoToken).toBe("pot-video-alpha");
+		expect(result2.videoBoundPoToken).toBe("pot-video-beta");
+		expect(result1.videoBoundPoToken).not.toBe(result2.videoBoundPoToken);
 		expect(result1.streamingPot).toBe("pot-video-alpha");
 		expect(result2.streamingPot).toBe("pot-video-beta");
 		expect(result1.streamingPot).not.toBe(result2.streamingPot);
 	});
 
-	it("preserves visitorData and poToken across requests", async () => {
+	it("preserves visitorData and visitorBoundPoToken across requests", async () => {
 		const result = await fetchPoToken("video-id-3");
 
-		expect(result.visitorData).toBe(VISITOR_DATA);
-		expect(result.poToken).toBe(`pot-${VISITOR_DATA}`);
+		expect(result.visitorData).toBe(currentVisitorData);
+		expect(result.visitorBoundPoToken).toBe(`pot-${currentVisitorData}`);
+		expect(result.poToken).toBe(`pot-${currentVisitorData}`);
 	});
 });

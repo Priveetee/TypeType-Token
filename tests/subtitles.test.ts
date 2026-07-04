@@ -14,13 +14,15 @@ mock.module("../src/botguard-page.ts", () => ({
 mock.module("../src/token-service.ts", () => ({
 	getOrRefreshSession: mock(async () => ({
 		visitorData: VISITOR_DATA,
-		poToken: PO_TOKEN,
+		visitorBoundPoToken: PO_TOKEN,
 		integrityToken: INTEGRITY_TOKEN,
 		expiresAt: Date.now() + 3600_000,
 	})),
 	fetchPoToken: mock(async (videoId: string) => ({
-		poToken: PO_TOKEN,
 		visitorData: VISITOR_DATA,
+		visitorBoundPoToken: PO_TOKEN,
+		videoBoundPoToken: `pot-${videoId}`,
+		poToken: PO_TOKEN,
 		streamingPot: `pot-${videoId}`,
 	})),
 }));

@@ -3,14 +3,18 @@ import type { RawCaptionTrack } from "../src/innertube.ts";
 import type { SubtitleTrack } from "../src/subtitles.ts";
 import type { TokenResult } from "../src/token-service.ts";
 
+const mockFetchPoToken = mock(
+	async (videoId: string, _forceRefresh = false): Promise<TokenResult> => ({
+		visitorData: "visitor-data",
+		visitorBoundPoToken: "visitor-bound-token",
+		videoBoundPoToken: `video-bound-${videoId}`,
+		poToken: "visitor-bound-token",
+		streamingPot: `video-bound-${videoId}`,
+	}),
+);
+
 mock.module("../src/token-service.ts", () => ({
-	fetchPoToken: mock(
-		async (videoId: string): Promise<TokenResult> => ({
-			poToken: `pot-${videoId}`,
-			visitorData: "visitor-data",
-			streamingPot: `stream-${videoId}`,
-		}),
-	),
+	fetchPoToken: mockFetchPoToken,
 }));
 
 mock.module("../src/innertube.ts", () => ({
@@ -45,9 +49,21 @@ describe("handler", () => {
 
 		expect(res.status).toBe(200);
 		const body = (await res.json()) as TokenResult;
-		expect(body.poToken).toBe("pot-abc");
 		expect(body.visitorData).toBe("visitor-data");
-		expect(body.streamingPot).toBe("stream-abc");
+		expect(body.visitorBoundPoToken).toBe("visitor-bound-token");
+		expect(body.videoBoundPoToken).toBe("video-bound-abc");
+		expect(body.poToken).toBe("visitor-bound-token");
+		expect(body.streamingPot).toBe("video-bound-abc");
+	});
+
+	it("GET /potoken forwards refresh requests", async () => {
+		const { handler } = await import("../src/index.ts");
+		const res = await handler(
+			new Request("http://localhost:8081/potoken?videoId=abc&refresh=true"),
+		);
+
+		expect(res.status).toBe(200);
+		expect(mockFetchPoToken.mock.calls.at(-1)?.[1]).toBe(true);
 	});
 
 	it("GET /subtitles without videoId returns 400", async () => {
