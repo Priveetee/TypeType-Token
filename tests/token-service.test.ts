@@ -38,7 +38,7 @@ mock.module("../src/innertube.ts", () => ({
 	fetchCaptionTracks: mock(async (_videoId: string, _visitorData: string, _poToken: string) => []),
 }));
 
-let fetchPoToken: (videoId: string, forceRefresh?: boolean) => Promise<TokenResult>;
+let fetchPoToken: (videoId: string, forceRefresh?: boolean, refreshVideo?: boolean) => Promise<TokenResult>;
 
 describe("fetchPoToken", () => {
 	beforeAll(async () => {
@@ -117,6 +117,16 @@ describe("fetchPoToken", () => {
 
 		expect(result1.videoBoundPoToken).toBe("pot-video-cache");
 		expect(result2.videoBoundPoToken).toBe("pot-video-cache");
+		expect(mockMintPoToken.mock.calls.length).toBe(callsBefore + 1);
+	});
+
+	it("refreshes only the video-bound token when requested", async () => {
+		const callsBefore = mockMintPoToken.mock.calls.length;
+		const result = await fetchPoToken("video-cache", false, true);
+
+		expect(result.visitorData).toBe(currentVisitorData);
+		expect(result.visitorBoundPoToken).toBe(`pot-${currentVisitorData}`);
+		expect(result.videoBoundPoToken).toBe("pot-video-cache");
 		expect(mockMintPoToken.mock.calls.length).toBe(callsBefore + 1);
 	});
 

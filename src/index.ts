@@ -30,7 +30,11 @@ export async function handler(
 		}
 
 		try {
-			const result = await fetchPoToken(videoId, url.searchParams.get("refresh") === "true");
+			const result = await fetchPoToken(
+				videoId,
+				url.searchParams.get("refresh") === "true",
+				url.searchParams.get("refreshVideo") === "true",
+			);
 			return Response.json(result);
 		} catch (error) {
 			const message = error instanceof Error ? error.message : "Internal error";

@@ -4,7 +4,7 @@ import type { SubtitleTrack } from "../src/subtitles.ts";
 import type { TokenResult } from "../src/token-service.ts";
 
 const mockFetchPoToken = mock(
-	async (videoId: string, _forceRefresh = false): Promise<TokenResult> => ({
+	async (videoId: string, _forceRefresh = false, _refreshVideo = false): Promise<TokenResult> => ({
 		visitorData: "visitor-data",
 		visitorBoundPoToken: "visitor-bound-token",
 		videoBoundPoToken: `video-bound-${videoId}`,
@@ -64,6 +64,16 @@ describe("handler", () => {
 
 		expect(res.status).toBe(200);
 		expect(mockFetchPoToken.mock.calls.at(-1)?.[1]).toBe(true);
+	});
+
+	it("GET /potoken forwards video refresh requests", async () => {
+		const { handler } = await import("../src/index.ts");
+		const res = await handler(
+			new Request("http://localhost:8081/potoken?videoId=abc&refreshVideo=true"),
+		);
+
+		expect(res.status).toBe(200);
+		expect(mockFetchPoToken.mock.calls.at(-1)?.[2]).toBe(true);
 	});
 
 	it("GET /subtitles without videoId returns 400", async () => {

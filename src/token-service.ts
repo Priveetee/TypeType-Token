@@ -71,6 +71,12 @@ async function getVideoBoundPoToken(s: CachedSession, videoId: string): Promise<
 	return request;
 }
 
+async function refreshVideoBoundPoToken(s: CachedSession, videoId: string): Promise<string> {
+	s.videoBoundPoTokens.delete(videoId);
+	s.videoBoundPoTokenRequests.delete(videoId);
+	return getVideoBoundPoToken(s, videoId);
+}
+
 function startSessionRefresh(forceRefresh: boolean): Promise<CachedSession> {
 	const generation = ++refreshGeneration;
 	const promise = resetBotGuardPage()
@@ -103,10 +109,16 @@ export async function getOrRefreshSession(forceRefresh = false): Promise<CachedS
 	return refreshInFlight ?? startSessionRefresh(false);
 }
 
-export async function fetchPoToken(videoId: string, forceRefresh = false): Promise<TokenResult> {
+export async function fetchPoToken(
+	videoId: string,
+	forceRefresh = false,
+	refreshVideo = false,
+): Promise<TokenResult> {
 	const currentSession = await getOrRefreshSession(forceRefresh);
 	const { visitorData, visitorBoundPoToken } = currentSession;
-	const videoBoundPoToken = await getVideoBoundPoToken(currentSession, videoId);
+	const videoBoundPoToken = refreshVideo
+		? await refreshVideoBoundPoToken(currentSession, videoId)
+		: await getVideoBoundPoToken(currentSession, videoId);
 	return {
 		visitorData,
 		visitorBoundPoToken,
