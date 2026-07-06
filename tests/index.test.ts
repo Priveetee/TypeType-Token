@@ -2,6 +2,7 @@ import { describe, expect, it, mock } from "bun:test";
 import type { RawCaptionTrack } from "../src/innertube.ts";
 import type { SubtitleTrack } from "../src/subtitles.ts";
 import type { TokenResult } from "../src/token-service.ts";
+import type { YoutubeSabrSession } from "../src/youtube-sabr-session.ts";
 
 const mockFetchPoToken = mock(
 	async (videoId: string, _forceRefresh = false, _refreshVideo = false): Promise<TokenResult> => ({
@@ -22,6 +23,23 @@ mock.module("../src/innertube.ts", () => ({
 	fetchVisitorData: mock(async (): Promise<string> => "visitor-data"),
 	fetchChallenge: mock(async () => ({})),
 	fetchIntegrityToken: mock(async () => ({ integrityToken: "integrity-token" })),
+}));
+
+mock.module("../src/youtube-sabr-session.ts", () => ({
+	fetchYoutubeSabrSession: mock(
+		async (videoId: string, client = "MWEB"): Promise<YoutubeSabrSession> => ({
+			videoId,
+			client: client === "WEB" ? "WEB" : "MWEB",
+			visitorData: "visitor-data",
+			poToken: "visitor-bound-token",
+			streamingPot: `video-bound-${videoId}`,
+			serverAbrStreamingUrl: "https://example.test/sabr",
+			videoPlaybackUstreamerConfig: "ustreamer-config",
+			durationMs: 1000,
+			title: "Test video",
+			formats: [],
+		}),
+	),
 }));
 
 describe("handler", () => {
@@ -92,6 +110,40 @@ describe("handler", () => {
 		expect(res.status).toBe(200);
 		const body = (await res.json()) as SubtitleTrack[];
 		expect(Array.isArray(body)).toBe(true);
+	});
+
+	it("GET /youtube/sabr/session without videoId returns 400", async () => {
+		const { handler } = await import("../src/index.ts");
+		const res = await handler(new Request("http://localhost:8081/youtube/sabr/session"));
+
+		expect(res.status).toBe(400);
+		const body = (await res.json()) as { error: string };
+		expect(body.error).toBe("videoId query parameter is required");
+	});
+
+	it("GET /youtube/sabr/session rejects unsupported clients", async () => {
+		const { handler } = await import("../src/index.ts");
+		const res = await handler(
+			new Request("http://localhost:8081/youtube/sabr/session?videoId=abc&client=ANDROID_VR"),
+		);
+
+		expect(res.status).toBe(400);
+		const body = (await res.json()) as { error: string };
+		expect(body.error).toBe("client must be WEB or MWEB");
+	});
+
+	it("GET /youtube/sabr/session returns SABR metadata", async () => {
+		const { handler } = await import("../src/index.ts");
+		const res = await handler(
+			new Request("http://localhost:8081/youtube/sabr/session?videoId=abc"),
+		);
+
+		expect(res.status).toBe(200);
+		const body = (await res.json()) as YoutubeSabrSession;
+		expect(body.videoId).toBe("abc");
+		expect(body.client).toBe("MWEB");
+		expect(body.serverAbrStreamingUrl).toBe("https://example.test/sabr");
+		expect(body.videoPlaybackUstreamerConfig).toBe("ustreamer-config");
 	});
 
 	it("unknown route returns 404", async () => {

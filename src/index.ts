@@ -8,6 +8,8 @@ import {
 } from "./remote-login-routes.ts";
 import { fetchSubtitles } from "./subtitles.ts";
 import { fetchPoToken } from "./token-service.ts";
+import { fetchYoutubeSabrSession } from "./youtube-sabr-session.ts";
+import type { YoutubeSabrClient } from "./youtube-sabr-types.ts";
 
 const PORT = 8081;
 const remoteLoginConfig = readRemoteLoginConfig();
@@ -52,6 +54,26 @@ export async function handler(
 		try {
 			const tracks = await fetchSubtitles(videoId);
 			return Response.json(tracks);
+		} catch (error) {
+			const message = error instanceof Error ? error.message : "Internal error";
+			return Response.json({ error: message }, { status: 500 });
+		}
+	}
+
+	if (req.method === "GET" && url.pathname === "/youtube/sabr/session") {
+		const videoId = url.searchParams.get("videoId");
+		const clientParam = url.searchParams.get("client") ?? "MWEB";
+
+		if (!videoId) {
+			return Response.json({ error: "videoId query parameter is required" }, { status: 400 });
+		}
+		if (clientParam !== "WEB" && clientParam !== "MWEB") {
+			return Response.json({ error: "client must be WEB or MWEB" }, { status: 400 });
+		}
+
+		try {
+			const result = await fetchYoutubeSabrSession(videoId, clientParam as YoutubeSabrClient);
+			return Response.json(result);
 		} catch (error) {
 			const message = error instanceof Error ? error.message : "Internal error";
 			return Response.json({ error: message }, { status: 500 });
