@@ -38,7 +38,11 @@ mock.module("../src/innertube.ts", () => ({
 	fetchCaptionTracks: mock(async (_videoId: string, _visitorData: string, _poToken: string) => []),
 }));
 
-let fetchPoToken: (videoId: string, forceRefresh?: boolean, refreshVideo?: boolean) => Promise<TokenResult>;
+let fetchPoToken: (
+	videoId: string,
+	forceRefresh?: boolean,
+	refreshVideo?: boolean,
+) => Promise<TokenResult>;
 
 describe("fetchPoToken", () => {
 	beforeAll(async () => {
