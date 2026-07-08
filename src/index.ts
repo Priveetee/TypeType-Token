@@ -8,6 +8,7 @@ import {
 } from "./remote-login-routes.ts";
 import { fetchSubtitles } from "./subtitles.ts";
 import { fetchPoToken } from "./token-service.ts";
+import { decodeYoutubePlayerBatch } from "./youtube-player-decoder.ts";
 import { fetchYoutubeSabrSession } from "./youtube-sabr-session.ts";
 import type { YoutubeSabrClient } from "./youtube-sabr-types.ts";
 
@@ -74,6 +75,18 @@ export async function handler(
 		try {
 			const result = await fetchYoutubeSabrSession(videoId, clientParam as YoutubeSabrClient);
 			return Response.json(result);
+		} catch (error) {
+			const message = error instanceof Error ? error.message : "Internal error";
+			return Response.json({ error: message }, { status: 500 });
+		}
+	}
+
+	if (req.method === "POST" && url.pathname === "/youtube/player/decoder") {
+		try {
+			const body = (await req.json().catch(() => ({}))) as Parameters<
+				typeof decodeYoutubePlayerBatch
+			>[0];
+			return Response.json(await decodeYoutubePlayerBatch(body));
 		} catch (error) {
 			const message = error instanceof Error ? error.message : "Internal error";
 			return Response.json({ error: message }, { status: 500 });

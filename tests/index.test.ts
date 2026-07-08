@@ -2,6 +2,7 @@ import { describe, expect, it, mock } from "bun:test";
 import type { RawCaptionTrack } from "../src/innertube.ts";
 import type { SubtitleTrack } from "../src/subtitles.ts";
 import type { TokenResult } from "../src/token-service.ts";
+import type { YoutubePlayerDecodeResponse } from "../src/youtube-player-decoder.ts";
 import type { YoutubeSabrSession } from "../src/youtube-sabr-session.ts";
 
 const mockFetchPoToken = mock(
@@ -38,6 +39,17 @@ mock.module("../src/youtube-sabr-session.ts", () => ({
 			durationMs: 1000,
 			title: "Test video",
 			formats: [],
+		}),
+	),
+}));
+
+mock.module("../src/youtube-player-decoder.ts", () => ({
+	decodeYoutubePlayerBatch: mock(
+		async (): Promise<YoutubePlayerDecodeResponse> => ({
+			playerId: "player-id",
+			signatureTimestamp: 12345,
+			signatures: { abc: "cba" },
+			throttlingParameters: { xyz: "zyx" },
 		}),
 	),
 }));
@@ -144,6 +156,23 @@ describe("handler", () => {
 		expect(body.client).toBe("MWEB");
 		expect(body.serverAbrStreamingUrl).toBe("https://example.test/sabr");
 		expect(body.videoPlaybackUstreamerConfig).toBe("ustreamer-config");
+	});
+
+	it("POST /youtube/player/decoder returns player decode result", async () => {
+		const { handler } = await import("../src/index.ts");
+		const res = await handler(
+			new Request("http://localhost:8081/youtube/player/decoder", {
+				method: "POST",
+				body: JSON.stringify({ signatures: ["abc"], throttlingParameters: ["xyz"] }),
+			}),
+		);
+
+		expect(res.status).toBe(200);
+		const body = (await res.json()) as YoutubePlayerDecodeResponse;
+		expect(body.playerId).toBe("player-id");
+		expect(body.signatureTimestamp).toBe(12345);
+		expect(body.signatures.abc).toBe("cba");
+		expect(body.throttlingParameters.xyz).toBe("zyx");
 	});
 
 	it("unknown route returns 404", async () => {
