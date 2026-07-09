@@ -3,16 +3,22 @@ import { chromium } from "playwright";
 
 const ROUTE = "https://www.youtube.com/__bgp__";
 const BLANK_HTML = "<!DOCTYPE html><html><body></body></html>";
+const USER_AGENT =
+	"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) " +
+	"Chrome/131.0.0.0 Safari/537.3";
 
 let browser: Browser | null = null;
 let page: Page | null = null;
 
 async function ensurePage(): Promise<Page> {
 	if (!browser) {
-		browser = await chromium.launch({ headless: true });
+		browser = await chromium.launch({
+			headless: false,
+			args: ["--disable-blink-features=AutomationControlled"],
+		});
 	}
 	if (!page || page.isClosed()) {
-		page = await browser.newPage();
+		page = await browser.newPage({ userAgent: USER_AGENT });
 		await page.route(ROUTE, (route) =>
 			route.fulfill({ contentType: "text/html", body: BLANK_HTML }),
 		);

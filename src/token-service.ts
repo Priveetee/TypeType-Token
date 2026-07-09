@@ -28,7 +28,7 @@ let refreshGeneration = 0;
 
 async function buildSession(): Promise<CachedSession> {
 	const visitorData = await fetchVisitorData();
-	const challenge = await fetchChallenge(visitorData);
+	const challenge = await fetchChallenge();
 
 	const botguardResponse = await executeBotGuard(
 		challenge.interpreterScript,
