@@ -35,6 +35,7 @@ mock.module("../src/youtube-sabr-session.ts", () => ({
 			poToken: "visitor-bound-token",
 			streamingPot: `video-bound-${videoId}`,
 			serverAbrStreamingUrl: "https://example.test/sabr",
+			hlsManifestUrl: "https://example.test/live.m3u8",
 			videoPlaybackUstreamerConfig: "ustreamer-config",
 			durationMs: 1000,
 			title: "Test video",
@@ -155,6 +156,7 @@ describe("handler", () => {
 		expect(body.videoId).toBe("abc");
 		expect(body.client).toBe("MWEB");
 		expect(body.serverAbrStreamingUrl).toBe("https://example.test/sabr");
+		expect(body.hlsManifestUrl).toBe("https://example.test/live.m3u8");
 		expect(body.videoPlaybackUstreamerConfig).toBe("ustreamer-config");
 	});
 

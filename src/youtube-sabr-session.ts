@@ -68,6 +68,7 @@ export async function fetchYoutubeSabrSession(
 		poToken: tokens.visitorBoundPoToken,
 		streamingPot: tokens.streamingPot,
 		serverAbrStreamingUrl,
+		hlsManifestUrl: videoInfo.streaming_data?.hls_manifest_url ?? null,
 		videoPlaybackUstreamerConfig,
 		durationMs: Number(videoInfo.video_details?.duration ?? 0) * 1000 || null,
 		title: videoInfo.video_details?.title ?? null,

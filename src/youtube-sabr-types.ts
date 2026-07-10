@@ -9,6 +9,7 @@ export type YoutubeSabrSession = {
 	poToken: string;
 	streamingPot: string;
 	serverAbrStreamingUrl: string;
+	hlsManifestUrl: string | null;
 	videoPlaybackUstreamerConfig: string;
 	durationMs: number | null;
 	title: string | null;
