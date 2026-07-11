@@ -65,6 +65,14 @@ describe("handler", () => {
 		expect(body).toEqual({ status: "ok" });
 	});
 
+	it("GET /version returns build metadata", async () => {
+		const { handler } = await import("../src/index.ts");
+		const res = await handler(new Request("http://localhost:8081/version"));
+
+		expect(res.status).toBe(200);
+		expect(await res.json()).toMatchObject({ service: "token", version: "0.1.0" });
+	});
+
 	it("GET /potoken without videoId returns 400", async () => {
 		const { handler } = await import("../src/index.ts");
 		const res = await handler(new Request("http://localhost:8081/potoken"));

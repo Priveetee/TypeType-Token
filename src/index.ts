@@ -1,4 +1,5 @@
 import type { Server } from "bun";
+import { buildInfo } from "./build-info.ts";
 import { readRemoteLoginConfig } from "./remote-login-config.ts";
 import { RemoteLoginManager } from "./remote-login-manager.ts";
 import {
@@ -95,6 +96,10 @@ export async function handler(
 
 	if (req.method === "GET" && url.pathname === "/health") {
 		return Response.json({ status: "ok" });
+	}
+
+	if (req.method === "GET" && url.pathname === "/version") {
+		return Response.json(buildInfo);
 	}
 
 	return new Response("Not Found", { status: 404 });

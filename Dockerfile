@@ -13,6 +13,9 @@ ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 RUN bun install --frozen-lockfile --production
 
 FROM mcr.microsoft.com/playwright:v1.61.1-noble AS runner
+ARG BUILD_VERSION=0.1.0
+ARG BUILD_REVISION=development
+ARG BUILD_TIME=unknown
 WORKDIR /app
 COPY --from=oven/bun:1.3.14-slim /usr/local/bin/bun /usr/local/bin/bun
 COPY --from=prod-deps /app/node_modules ./node_modules
@@ -20,6 +23,9 @@ COPY --from=builder /app/dist ./dist
 COPY --chmod=755 docker-entrypoint.sh ./docker-entrypoint.sh
 EXPOSE 8081
 ENV NODE_ENV=production
+ENV TYPE_TYPE_BUILD_VERSION=$BUILD_VERSION
+ENV TYPE_TYPE_BUILD_REVISION=$BUILD_REVISION
+ENV TYPE_TYPE_BUILD_TIME=$BUILD_TIME
 ENV YOUTUBE_REMOTE_LOGIN_HEADLESS=false
 ENV YOUTUBE_REMOTE_LOGIN_DISABLE_AUTOMATION_CONTROLLED=true
 CMD ["./docker-entrypoint.sh"]
