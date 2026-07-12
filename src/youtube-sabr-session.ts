@@ -72,7 +72,7 @@ export async function fetchYoutubeSabrSession(
 		description: details?.short_description ?? "",
 		durationMs: (details?.duration ?? 0) * 1000,
 		viewCount: details?.view_count ?? 0,
-		thumbnailUrl: details?.thumbnail.at(-1)?.url ?? "",
+		thumbnailUrl: details?.thumbnail[0]?.url ?? "",
 		tags: details?.keywords ?? [],
 		isLive: details?.is_live ?? false,
 		isLiveContent: details?.is_live_content ?? false,
