@@ -35,6 +35,7 @@ mock.module("../src/youtube-sabr-session.ts", () => ({
 			poToken: "visitor-bound-token",
 			streamingPot: `video-bound-${videoId}`,
 			serverAbrStreamingUrl: "https://example.test/sabr",
+			rawServerAbrStreamingUrl: "https://example.test/raw-sabr",
 			hlsManifestUrl: "https://example.test/live.m3u8",
 			videoPlaybackUstreamerConfig: "ustreamer-config",
 			durationMs: 1000,

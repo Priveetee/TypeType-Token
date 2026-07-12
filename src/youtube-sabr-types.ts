@@ -9,6 +9,7 @@ export type YoutubeSabrSession = {
 	poToken: string;
 	streamingPot: string;
 	serverAbrStreamingUrl: string;
+	rawServerAbrStreamingUrl: string;
 	hlsManifestUrl: string | null;
 	videoPlaybackUstreamerConfig: string;
 	durationMs: number | null;
@@ -35,7 +36,8 @@ export type YoutubeSabrAdaptiveFormat = {
 	bitrate: number;
 	contentLength?: number;
 	approxDurationMs: number;
-	url: string;
+	url?: string;
+	signatureCipher?: string;
 	initRange?: YoutubeSabrByteRange;
 	indexRange?: YoutubeSabrByteRange;
 };

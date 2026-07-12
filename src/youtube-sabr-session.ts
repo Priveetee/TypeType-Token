@@ -61,10 +61,8 @@ export async function fetchYoutubeSabrSession(
 	const formats = (videoInfo.streaming_data?.adaptive_formats ?? [])
 		.map((format) => buildSabrFormat(format))
 		.filter((format) => format.mimeType?.includes("audio") || format.mimeType?.includes("video"));
-	const adaptiveFormats = await Promise.all(
-		(videoInfo.streaming_data?.adaptive_formats ?? []).map((format) =>
-			toYoutubeSabrAdaptiveFormat(format, innertube.session.player),
-		),
+	const adaptiveFormats = (videoInfo.streaming_data?.adaptive_formats ?? []).map((format) =>
+		toYoutubeSabrAdaptiveFormat(format),
 	);
 
 	return {
@@ -74,6 +72,7 @@ export async function fetchYoutubeSabrSession(
 		poToken: tokens.visitorBoundPoToken,
 		streamingPot: tokens.streamingPot,
 		serverAbrStreamingUrl,
+		rawServerAbrStreamingUrl: videoInfo.streaming_data.server_abr_streaming_url,
 		hlsManifestUrl: videoInfo.streaming_data?.hls_manifest_url ?? null,
 		videoPlaybackUstreamerConfig,
 		durationMs: Number(videoInfo.video_details?.duration ?? 0) * 1000 || null,

@@ -6,7 +6,7 @@ type SourceAudioTrack = {
 	audio_is_default: boolean;
 };
 
-type SourceFormat<Player> = {
+type SourceFormat = {
 	itag: number;
 	last_modified_ms: string;
 	xtags?: string;
@@ -20,15 +20,13 @@ type SourceFormat<Player> = {
 	bitrate: number;
 	content_length?: number;
 	approx_duration_ms: number;
+	url?: string;
+	signature_cipher?: string;
 	init_range?: YoutubeSabrByteRange;
 	index_range?: YoutubeSabrByteRange;
-	decipher(player: Player): Promise<string>;
 };
 
-export async function toYoutubeSabrAdaptiveFormat<Player>(
-	format: SourceFormat<Player>,
-	player: Player,
-): Promise<YoutubeSabrAdaptiveFormat> {
+export function toYoutubeSabrAdaptiveFormat(format: SourceFormat): YoutubeSabrAdaptiveFormat {
 	const audioTrack = format.audio_track
 		? {
 				id: format.audio_track.id,
@@ -50,7 +48,8 @@ export async function toYoutubeSabrAdaptiveFormat<Player>(
 		bitrate: format.bitrate,
 		contentLength: format.content_length,
 		approxDurationMs: format.approx_duration_ms,
-		url: await format.decipher(player),
+		url: format.url,
+		signatureCipher: format.signature_cipher,
 		initRange: format.init_range,
 		indexRange: format.index_range,
 	};
