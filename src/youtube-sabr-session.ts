@@ -64,6 +64,19 @@ export async function fetchYoutubeSabrSession(
 	const adaptiveFormats = (videoInfo.streaming_data?.adaptive_formats ?? []).map((format) =>
 		toYoutubeSabrAdaptiveFormat(format),
 	);
+	const details = videoInfo.video_details;
+	const metadata = {
+		title: details?.title ?? "",
+		author: details?.author ?? "",
+		channelId: details?.channel_id ?? "",
+		description: details?.short_description ?? "",
+		durationMs: (details?.duration ?? 0) * 1000,
+		viewCount: details?.view_count ?? 0,
+		thumbnailUrl: details?.thumbnail.at(-1)?.url ?? "",
+		tags: details?.keywords ?? [],
+		isLive: details?.is_live ?? false,
+		isLiveContent: details?.is_live_content ?? false,
+	};
 
 	return {
 		videoId,
@@ -75,8 +88,9 @@ export async function fetchYoutubeSabrSession(
 		rawServerAbrStreamingUrl: videoInfo.streaming_data.server_abr_streaming_url,
 		hlsManifestUrl: videoInfo.streaming_data?.hls_manifest_url ?? null,
 		videoPlaybackUstreamerConfig,
-		durationMs: Number(videoInfo.video_details?.duration ?? 0) * 1000 || null,
-		title: videoInfo.video_details?.title ?? null,
+		durationMs: metadata.durationMs || null,
+		title: metadata.title || null,
+		metadata,
 		formats,
 		adaptiveFormats,
 	};

@@ -14,8 +14,22 @@ export type YoutubeSabrSession = {
 	videoPlaybackUstreamerConfig: string;
 	durationMs: number | null;
 	title: string | null;
+	metadata: YoutubeSabrMetadata;
 	formats: SabrFormat[];
 	adaptiveFormats: YoutubeSabrAdaptiveFormat[];
+};
+
+export type YoutubeSabrMetadata = {
+	title: string;
+	author: string;
+	channelId: string;
+	description: string;
+	durationMs: number;
+	viewCount: number;
+	thumbnailUrl: string;
+	tags: string[];
+	isLive: boolean;
+	isLiveContent: boolean;
 };
 
 export type YoutubeSabrAdaptiveFormat = {
