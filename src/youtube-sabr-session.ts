@@ -1,6 +1,7 @@
 import { buildSabrFormat } from "googlevideo/utils";
 import Innertube, { ClientType, Platform, UniversalCache, YTNodes } from "youtubei.js";
 import { fetchPoToken } from "./token-service.ts";
+import { toYoutubeSabrAdaptiveFormat } from "./youtube-sabr-adaptive-format.ts";
 import type { YoutubeSabrClient, YoutubeSabrSession } from "./youtube-sabr-types.ts";
 
 function installPlatformShim(): void {
@@ -60,6 +61,11 @@ export async function fetchYoutubeSabrSession(
 	const formats = (videoInfo.streaming_data?.adaptive_formats ?? [])
 		.map((format) => buildSabrFormat(format))
 		.filter((format) => format.mimeType?.includes("audio") || format.mimeType?.includes("video"));
+	const adaptiveFormats = await Promise.all(
+		(videoInfo.streaming_data?.adaptive_formats ?? []).map((format) =>
+			toYoutubeSabrAdaptiveFormat(format, innertube.session.player),
+		),
+	);
 
 	return {
 		videoId,
@@ -73,5 +79,6 @@ export async function fetchYoutubeSabrSession(
 		durationMs: Number(videoInfo.video_details?.duration ?? 0) * 1000 || null,
 		title: videoInfo.video_details?.title ?? null,
 		formats,
+		adaptiveFormats,
 	};
 }

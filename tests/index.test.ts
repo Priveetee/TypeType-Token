@@ -40,6 +40,7 @@ mock.module("../src/youtube-sabr-session.ts", () => ({
 			durationMs: 1000,
 			title: "Test video",
 			formats: [],
+			adaptiveFormats: [],
 		}),
 	),
 }));

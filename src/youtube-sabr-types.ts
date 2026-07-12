@@ -14,6 +14,35 @@ export type YoutubeSabrSession = {
 	durationMs: number | null;
 	title: string | null;
 	formats: SabrFormat[];
+	adaptiveFormats: YoutubeSabrAdaptiveFormat[];
+};
+
+export type YoutubeSabrAdaptiveFormat = {
+	itag: number;
+	lastModified: string;
+	xtags?: string;
+	mimeType: string;
+	audioTrack?: {
+		id: string;
+		displayName: string;
+		audioIsDefault: boolean;
+	};
+	qualityLabel?: string;
+	audioQuality?: string;
+	isDrc: boolean;
+	width?: number;
+	height?: number;
+	bitrate: number;
+	contentLength?: number;
+	approxDurationMs: number;
+	url: string;
+	initRange?: YoutubeSabrByteRange;
+	indexRange?: YoutubeSabrByteRange;
+};
+
+export type YoutubeSabrByteRange = {
+	start: number;
+	end: number;
 };
 
 export type YoutubeAudioTrack = {
