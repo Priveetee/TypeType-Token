@@ -1,5 +1,10 @@
 import Innertube, { Platform, UniversalCache } from "youtubei.js";
 
+type YoutubeInnertube = Awaited<ReturnType<typeof Innertube.create>>;
+
+let innertubePromise: Promise<YoutubeInnertube> | undefined;
+let loadedPlayerId: string | undefined;
+
 export type YoutubePlayerDecodeRequest = {
 	playerId?: string;
 	signatures?: string[];
@@ -26,11 +31,28 @@ function safeValues(values: string[] | undefined): string[] {
 	return Array.isArray(values) ? values.filter((value) => typeof value === "string") : [];
 }
 
+async function getInnertube(playerId: string | undefined): Promise<YoutubeInnertube> {
+	if (playerId && loadedPlayerId && playerId !== loadedPlayerId) {
+		innertubePromise = undefined;
+		loadedPlayerId = undefined;
+	}
+	const pending = innertubePromise ?? Innertube.create({ cache: new UniversalCache(true) });
+	innertubePromise = pending;
+	try {
+		const innertube = await pending;
+		loadedPlayerId = innertube.session.player?.player_id;
+		return innertube;
+	} catch (error) {
+		if (innertubePromise === pending) innertubePromise = undefined;
+		throw error;
+	}
+}
+
 export async function decodeYoutubePlayerBatch(
 	request: YoutubePlayerDecodeRequest,
 ): Promise<YoutubePlayerDecodeResponse> {
 	installPlatformShim();
-	const innertube = await Innertube.create({ cache: new UniversalCache(true) });
+	const innertube = await getInnertube(request.playerId);
 	const player = innertube.session.player;
 	if (!player) throw new Error("YouTube player is unavailable");
 	const signatures: Record<string, string> = {};
