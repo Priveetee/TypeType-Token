@@ -1,6 +1,11 @@
 import { buildSabrFormat } from "googlevideo/utils";
 import Innertube, { ClientType, Platform, UniversalCache, YTNodes } from "youtubei.js";
 import { fetchPoToken } from "./token-service.ts";
+import { findYoutubeChannelAvatarUrl } from "./youtube-channel-avatar.ts";
+import {
+	cacheYoutubeChannelAvatar,
+	getCachedYoutubeChannelAvatar,
+} from "./youtube-channel-avatar-cache.ts";
 import { toYoutubeSabrAdaptiveFormat } from "./youtube-sabr-adaptive-format.ts";
 import type { YoutubeSabrClient, YoutubeSabrSession } from "./youtube-sabr-types.ts";
 
@@ -24,21 +29,28 @@ export async function fetchYoutubeSabrSession(
 		client_type: client === "MWEB" ? ClientType.MWEB : ClientType.WEB,
 	});
 	const endpoint = new YTNodes.NavigationEndpoint({ watchEndpoint: { videoId } });
-	const videoInfo = await endpoint.call(innertube.actions, {
-		playbackContext: {
-			adPlaybackContext: { pyv: true },
-			contentPlaybackContext: {
-				vis: 0,
-				splay: false,
-				lactMilliseconds: "-1",
-				signatureTimestamp: innertube.session.player?.signature_timestamp,
+	const nextEndpoint = new YTNodes.NavigationEndpoint({ watchNextEndpoint: { videoId } });
+	const cachedChannelAvatarUrl = getCachedYoutubeChannelAvatar(videoId);
+	const [videoInfo, nextResponse] = await Promise.all([
+		endpoint.call(innertube.actions, {
+			playbackContext: {
+				adPlaybackContext: { pyv: true },
+				contentPlaybackContext: {
+					vis: 0,
+					splay: false,
+					lactMilliseconds: "-1",
+					signatureTimestamp: innertube.session.player?.signature_timestamp,
+				},
 			},
-		},
-		serviceIntegrityDimensions: { poToken: tokens.streamingPot },
-		contentCheckOk: true,
-		racyCheckOk: true,
-		parse: true,
-	});
+			serviceIntegrityDimensions: { poToken: tokens.streamingPot },
+			contentCheckOk: true,
+			racyCheckOk: true,
+			parse: true,
+		}),
+		cachedChannelAvatarUrl
+			? Promise.resolve(null)
+			: nextEndpoint.call(innertube.actions, { parse: false }).catch(() => null),
+	]);
 	if (videoInfo.playability_status?.status !== "OK") {
 		throw new Error(
 			`YouTube ${client} player response is ${videoInfo.playability_status?.status ?? "missing"}: ${videoInfo.playability_status?.reason ?? "no reason"}`,
@@ -65,10 +77,14 @@ export async function fetchYoutubeSabrSession(
 		toYoutubeSabrAdaptiveFormat(format),
 	);
 	const details = videoInfo.video_details;
+	const channelAvatarUrl =
+		cachedChannelAvatarUrl ?? findYoutubeChannelAvatarUrl(nextResponse?.data);
+	cacheYoutubeChannelAvatar(videoId, channelAvatarUrl);
 	const metadata = {
 		title: details?.title ?? "",
 		author: details?.author ?? "",
 		channelId: details?.channel_id ?? "",
+		channelAvatarUrl,
 		description: details?.short_description ?? "",
 		durationMs: (details?.duration ?? 0) * 1000,
 		viewCount: details?.view_count ?? 0,

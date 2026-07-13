@@ -23,6 +23,7 @@ export type YoutubeSabrMetadata = {
 	title: string;
 	author: string;
 	channelId: string;
+	channelAvatarUrl: string;
 	description: string;
 	durationMs: number;
 	viewCount: number;
