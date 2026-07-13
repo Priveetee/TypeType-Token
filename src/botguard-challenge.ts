@@ -1,4 +1,6 @@
-export const WEB_CLIENT_VERSION = "2.20260227.01.00";
+import { Constants } from "youtubei.js";
+
+export const WEB_CLIENT_VERSION = Constants.CLIENTS.WEB.VERSION;
 const ATT_GET_URL = "https://www.youtube.com/youtubei/v1/att/get?prettyPrint=false";
 const WAA_API_KEY = "AIzaSyDyT5W0Jh49F30Pqqtyfdf7pDLFKLJoAnw";
 const USER_AGENT =
@@ -47,13 +49,16 @@ async function resolveInterpreterScript(challenge: AttGetChallenge): Promise<str
 	return script;
 }
 
-export async function fetchChallenge(): Promise<BotGuardChallenge> {
+export async function fetchChallenge(visitorData: string): Promise<BotGuardChallenge> {
 	const response = await fetch(ATT_GET_URL, {
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
 			"User-Agent": USER_AGENT,
 			Accept: "application/json",
+			"X-Goog-Visitor-Id": visitorData,
+			"X-Youtube-Client-Name": "1",
+			"X-Youtube-Client-Version": WEB_CLIENT_VERSION,
 			"x-goog-api-key": WAA_API_KEY,
 			"x-user-agent": "grpc-web-javascript/0.1",
 		},
@@ -63,6 +68,10 @@ export async function fetchChallenge(): Promise<BotGuardChallenge> {
 				client: {
 					clientName: "WEB",
 					clientVersion: WEB_CLIENT_VERSION,
+					hl: "en",
+					gl: "US",
+					utcOffsetMinutes: 0,
+					visitorData,
 				},
 			},
 		}),
