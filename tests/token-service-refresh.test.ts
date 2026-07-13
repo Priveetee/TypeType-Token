@@ -11,8 +11,23 @@ const visitorDataGate = new Promise<void>((resolve) => {
 	releaseVisitorData = resolve;
 });
 const mockExecuteBotGuard = mock(async (): Promise<string> => "botguard-response");
-const mockMintPoToken = mock(async (_token: string, id: string): Promise<string> => `pot-${id}`);
-const mockResetBotGuardPage = mock(async (): Promise<void> => undefined);
+let releaseRacingMint: (() => void) | undefined;
+let markRacingMintStarted: (() => void) | undefined;
+const refreshEvents: string[] = [];
+const mockMintPoToken = mock(async (_token: string, id: string): Promise<string> => {
+	if (id === "racing-video") {
+		refreshEvents.push("mint-started");
+		markRacingMintStarted?.();
+		await new Promise<void>((resolve) => {
+			releaseRacingMint = resolve;
+		});
+		refreshEvents.push("mint-finished");
+	}
+	return `pot-${id}`;
+});
+const mockResetBotGuardPage = mock(async (): Promise<void> => {
+	refreshEvents.push("page-reset");
+});
 let visitorDataRequests = 0;
 
 mock.module("../src/botguard-page.ts", () => ({
@@ -83,6 +98,28 @@ describe("token refresh concurrency", () => {
 		expect(mockMintPoToken.mock.calls.length).toBe(callsBefore + 1);
 		await fetchPoToken("refresh-video", false, true);
 		expect(mockMintPoToken.mock.calls.length).toBe(callsBefore + 1);
+	});
+
+	it("waits for active video token mints before resetting BotGuard", async () => {
+		const racingMintStarted = new Promise<void>((resolve) => {
+			markRacingMintStarted = resolve;
+		});
+		const eventsBefore = refreshEvents.length;
+		const activeMint = fetchPoToken("racing-video");
+		await racingMintStarted;
+		const forcedRefresh = fetchPoToken("forced-after-race", true);
+		const joinedRefresh = fetchPoToken("joined-during-refresh");
+		await Promise.resolve();
+		expect(refreshEvents.slice(eventsBefore)).toEqual(["mint-started"]);
+
+		releaseRacingMint?.();
+		await Promise.all([activeMint, forcedRefresh, joinedRefresh]);
+
+		expect(refreshEvents.slice(eventsBefore)).toEqual([
+			"mint-started",
+			"mint-finished",
+			"page-reset",
+		]);
 	});
 
 	it("bounds the video token cache", async () => {

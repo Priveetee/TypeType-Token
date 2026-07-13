@@ -96,8 +96,15 @@ async function refreshVideoBoundPoToken(s: CachedSession, videoId: string): Prom
 }
 
 function startSessionRefresh(): Promise<CachedSession> {
-	const promise = resetBotGuardPage()
-		.then(() => buildSession())
+	const previousSession = session;
+	const promise = Promise.resolve()
+		.then(async () => {
+			if (previousSession !== null) {
+				await Promise.allSettled(previousSession.videoBoundPoTokenRequests.values());
+			}
+			await resetBotGuardPage();
+			return buildSession();
+		})
 		.then((s) => {
 			session = s;
 			return s;
@@ -110,8 +117,9 @@ function startSessionRefresh(): Promise<CachedSession> {
 }
 
 export async function getOrRefreshSession(forceRefresh = false): Promise<CachedSession> {
+	if (sessionRefreshInFlight !== null) return sessionRefreshInFlight;
 	if (!forceRefresh && session !== null && Date.now() < session.expiresAt) return session;
-	return sessionRefreshInFlight ?? startSessionRefresh();
+	return startSessionRefresh();
 }
 
 export async function fetchPoToken(
