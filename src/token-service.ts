@@ -4,6 +4,7 @@ import { fetchIntegrityToken, fetchVisitorData } from "./innertube.ts";
 
 const EXPIRY_MARGIN_MS = 10 * 60 * 1000;
 const MAX_CACHED_VIDEO_TOKENS = 512;
+const VIDEO_TOKEN_REFRESH_COALESCE_MS = 1000;
 
 export type TokenResult = {
 	visitorData: string;
@@ -20,6 +21,7 @@ type CachedSession = {
 	expiresAt: number;
 	videoBoundPoTokens: Map<string, string>;
 	videoBoundPoTokenRequests: Map<string, Promise<string>>;
+	videoBoundPoTokenRefreshTimes: Map<string, number>;
 };
 
 let session: CachedSession | null = null;
@@ -51,6 +53,7 @@ async function buildSession(): Promise<CachedSession> {
 		expiresAt: Date.now() + ttlMs - refreshMarginMs,
 		videoBoundPoTokens: new Map(),
 		videoBoundPoTokenRequests: new Map(),
+		videoBoundPoTokenRefreshTimes: new Map(),
 	};
 }
 
@@ -65,7 +68,10 @@ async function getVideoBoundPoToken(s: CachedSession, videoId: string): Promise<
 		.then((token) => {
 			if (s.videoBoundPoTokens.size >= MAX_CACHED_VIDEO_TOKENS) {
 				const oldestVideoId = s.videoBoundPoTokens.keys().next().value;
-				if (oldestVideoId !== undefined) s.videoBoundPoTokens.delete(oldestVideoId);
+				if (oldestVideoId !== undefined) {
+					s.videoBoundPoTokens.delete(oldestVideoId);
+					s.videoBoundPoTokenRefreshTimes.delete(oldestVideoId);
+				}
 			}
 			s.videoBoundPoTokens.set(videoId, token);
 			return token;
@@ -78,8 +84,15 @@ async function getVideoBoundPoToken(s: CachedSession, videoId: string): Promise<
 async function refreshVideoBoundPoToken(s: CachedSession, videoId: string): Promise<string> {
 	const inFlight = s.videoBoundPoTokenRequests.get(videoId);
 	if (inFlight !== undefined) return inFlight;
+	const refreshedAt = s.videoBoundPoTokenRefreshTimes.get(videoId);
+	if (refreshedAt !== undefined && Date.now() - refreshedAt < VIDEO_TOKEN_REFRESH_COALESCE_MS) {
+		return getVideoBoundPoToken(s, videoId);
+	}
 	s.videoBoundPoTokens.delete(videoId);
-	return getVideoBoundPoToken(s, videoId);
+	return getVideoBoundPoToken(s, videoId).then((token) => {
+		s.videoBoundPoTokenRefreshTimes.set(videoId, Date.now());
+		return token;
+	});
 }
 
 function startSessionRefresh(): Promise<CachedSession> {

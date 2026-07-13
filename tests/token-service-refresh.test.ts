@@ -81,6 +81,8 @@ describe("token refresh concurrency", () => {
 			fetchPoToken("refresh-video", false, true),
 		]);
 		expect(mockMintPoToken.mock.calls.length).toBe(callsBefore + 1);
+		await fetchPoToken("refresh-video", false, true);
+		expect(mockMintPoToken.mock.calls.length).toBe(callsBefore + 1);
 	});
 
 	it("bounds the video token cache", async () => {
