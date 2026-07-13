@@ -1,5 +1,6 @@
 import { buildSabrFormat } from "googlevideo/utils";
 import Innertube, { ClientType, Platform, UniversalCache, YTNodes } from "youtubei.js";
+import { KeyedSingleFlight } from "./keyed-single-flight.ts";
 import { fetchPoToken } from "./token-service.ts";
 import { findYoutubeChannelAvatarUrl } from "./youtube-channel-avatar.ts";
 import {
@@ -8,6 +9,16 @@ import {
 } from "./youtube-channel-avatar-cache.ts";
 import { toYoutubeSabrAdaptiveFormat } from "./youtube-sabr-adaptive-format.ts";
 import type { YoutubeSabrClient, YoutubeSabrSession } from "./youtube-sabr-types.ts";
+
+type YoutubeInnertube = Awaited<ReturnType<typeof Innertube.create>>;
+
+type SharedInnertube = {
+	visitorData: string;
+	pending: Promise<YoutubeInnertube>;
+};
+
+const innertubeByClient = new Map<YoutubeSabrClient, SharedInnertube>();
+const sessionRequests = new KeyedSingleFlight<string, YoutubeSabrSession>();
 
 function installPlatformShim(): void {
 	Platform.shim.eval = async (data, env) => {
@@ -22,12 +33,36 @@ export async function fetchYoutubeSabrSession(
 	videoId: string,
 	client: YoutubeSabrClient = "MWEB",
 ): Promise<YoutubeSabrSession> {
-	const tokens = await fetchPoToken(videoId);
-	installPlatformShim();
-	const innertube = await Innertube.create({
+	return sessionRequests.run(`${client}:${videoId}`, () => loadYoutubeSabrSession(videoId, client));
+}
+
+async function getInnertube(
+	client: YoutubeSabrClient,
+	visitorData: string,
+): Promise<YoutubeInnertube> {
+	const shared = innertubeByClient.get(client);
+	if (shared?.visitorData === visitorData) return shared.pending;
+	const pending = Innertube.create({
 		cache: new UniversalCache(true),
 		client_type: client === "MWEB" ? ClientType.MWEB : ClientType.WEB,
+		visitor_data: visitorData,
 	});
+	innertubeByClient.set(client, { visitorData, pending });
+	try {
+		return await pending;
+	} catch (error) {
+		if (innertubeByClient.get(client)?.pending === pending) innertubeByClient.delete(client);
+		throw error;
+	}
+}
+
+async function loadYoutubeSabrSession(
+	videoId: string,
+	client: YoutubeSabrClient,
+): Promise<YoutubeSabrSession> {
+	const tokens = await fetchPoToken(videoId);
+	installPlatformShim();
+	const innertube = await getInnertube(client, tokens.visitorData);
 	const endpoint = new YTNodes.NavigationEndpoint({ watchEndpoint: { videoId } });
 	const nextEndpoint = new YTNodes.NavigationEndpoint({ watchNextEndpoint: { videoId } });
 	const cachedChannelAvatarUrl = getCachedYoutubeChannelAvatar(videoId);
