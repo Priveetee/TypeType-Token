@@ -13,8 +13,23 @@ const visitorDataGate = new Promise<void>((resolve) => {
 const mockExecuteBotGuard = mock(async (): Promise<string> => "botguard-response");
 let releaseRacingMint: (() => void) | undefined;
 let markRacingMintStarted: (() => void) | undefined;
+let releaseRefreshMint: (() => void) | undefined;
+let markRefreshMintStarted: (() => void) | undefined;
+let blockRefreshMint = false;
+let refreshMintGeneration = 0;
 const refreshEvents: string[] = [];
 const mockMintPoToken = mock(async (_token: string, id: string): Promise<string> => {
+	if (id === "refresh-video") {
+		const generation = ++refreshMintGeneration;
+		if (blockRefreshMint) {
+			blockRefreshMint = false;
+			markRefreshMintStarted?.();
+			await new Promise<void>((resolve) => {
+				releaseRefreshMint = resolve;
+			});
+		}
+		return `pot-${id}-${generation}`;
+	}
 	if (id === "racing-video") {
 		refreshEvents.push("mint-started");
 		markRacingMintStarted?.();
@@ -89,15 +104,25 @@ describe("token refresh concurrency", () => {
 	});
 
 	it("deduplicates concurrent video token refreshes", async () => {
-		await fetchPoToken("refresh-video");
+		const initial = await fetchPoToken("refresh-video");
 		const callsBefore = mockMintPoToken.mock.calls.length;
-		await Promise.all([
-			fetchPoToken("refresh-video", false, true),
-			fetchPoToken("refresh-video", false, true),
-		]);
+		const refreshMintStarted = new Promise<void>((resolve) => {
+			markRefreshMintStarted = resolve;
+		});
+		blockRefreshMint = true;
+		const firstRefresh = fetchPoToken("refresh-video", false, true);
+		await refreshMintStarted;
+		const joinedRefresh = fetchPoToken("refresh-video", false, true);
+		releaseRefreshMint?.();
+		const [firstResult, joinedResult] = await Promise.all([firstRefresh, joinedRefresh]);
+
 		expect(mockMintPoToken.mock.calls.length).toBe(callsBefore + 1);
-		await fetchPoToken("refresh-video", false, true);
-		expect(mockMintPoToken.mock.calls.length).toBe(callsBefore + 1);
+		expect(firstResult.videoBoundPoToken).toBe(joinedResult.videoBoundPoToken);
+		expect(firstResult.videoBoundPoToken).not.toBe(initial.videoBoundPoToken);
+
+		const sequentialResult = await fetchPoToken("refresh-video", false, true);
+		expect(mockMintPoToken.mock.calls.length).toBe(callsBefore + 2);
+		expect(sequentialResult.videoBoundPoToken).not.toBe(firstResult.videoBoundPoToken);
 	});
 
 	it("waits for active video token mints before resetting BotGuard", async () => {
