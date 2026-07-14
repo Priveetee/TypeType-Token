@@ -1,4 +1,5 @@
 import type { Server } from "bun";
+import { buildInfo } from "./build-info.ts";
 import { readRemoteLoginConfig } from "./remote-login-config.ts";
 import { RemoteLoginManager } from "./remote-login-manager.ts";
 import {
@@ -8,6 +9,9 @@ import {
 } from "./remote-login-routes.ts";
 import { fetchSubtitles } from "./subtitles.ts";
 import { fetchPoToken } from "./token-service.ts";
+import { decodeYoutubePlayerBatch } from "./youtube-player-decoder.ts";
+import { fetchYoutubeSabrSession } from "./youtube-sabr-session.ts";
+import type { YoutubeSabrClient } from "./youtube-sabr-types.ts";
 
 const PORT = 8081;
 const remoteLoginConfig = readRemoteLoginConfig();
@@ -30,7 +34,11 @@ export async function handler(
 		}
 
 		try {
-			const result = await fetchPoToken(videoId);
+			const result = await fetchPoToken(
+				videoId,
+				url.searchParams.get("refresh") === "true",
+				url.searchParams.get("refreshVideo") === "true",
+			);
 			return Response.json(result);
 		} catch (error) {
 			const message = error instanceof Error ? error.message : "Internal error";
@@ -54,8 +62,44 @@ export async function handler(
 		}
 	}
 
+	if (req.method === "GET" && url.pathname === "/youtube/sabr/session") {
+		const videoId = url.searchParams.get("videoId");
+		const clientParam = url.searchParams.get("client") ?? "MWEB";
+
+		if (!videoId) {
+			return Response.json({ error: "videoId query parameter is required" }, { status: 400 });
+		}
+		if (clientParam !== "WEB" && clientParam !== "MWEB") {
+			return Response.json({ error: "client must be WEB or MWEB" }, { status: 400 });
+		}
+
+		try {
+			const result = await fetchYoutubeSabrSession(videoId, clientParam as YoutubeSabrClient);
+			return Response.json(result);
+		} catch (error) {
+			const message = error instanceof Error ? error.message : "Internal error";
+			return Response.json({ error: message }, { status: 500 });
+		}
+	}
+
+	if (req.method === "POST" && url.pathname === "/youtube/player/decoder") {
+		try {
+			const body = (await req.json().catch(() => ({}))) as Parameters<
+				typeof decodeYoutubePlayerBatch
+			>[0];
+			return Response.json(await decodeYoutubePlayerBatch(body));
+		} catch (error) {
+			const message = error instanceof Error ? error.message : "Internal error";
+			return Response.json({ error: message }, { status: 500 });
+		}
+	}
+
 	if (req.method === "GET" && url.pathname === "/health") {
 		return Response.json({ status: "ok" });
+	}
+
+	if (req.method === "GET" && url.pathname === "/version") {
+		return Response.json(buildInfo);
 	}
 
 	return new Response("Not Found", { status: 404 });

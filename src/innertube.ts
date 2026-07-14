@@ -1,4 +1,5 @@
 import type { IntegrityTokenData } from "bgutils-js";
+import { WEB_CLIENT_VERSION } from "./botguard-challenge.ts";
 
 const INNERTUBE_API_KEY = "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8";
 const WAA_API_KEY = "AIzaSyDyT5W0Jh49F30Pqqtyfdf7pDLFKLJoAnw";
@@ -33,7 +34,7 @@ export async function fetchVisitorData(): Promise<string> {
 						hl: "en",
 						gl: "US",
 						clientName: "WEB",
-						clientVersion: "2.20240726.00.00",
+						clientVersion: WEB_CLIENT_VERSION,
 					},
 				},
 			}),

@@ -3,16 +3,22 @@ import { chromium } from "playwright";
 
 const ROUTE = "https://www.youtube.com/__bgp__";
 const BLANK_HTML = "<!DOCTYPE html><html><body></body></html>";
+const USER_AGENT =
+	"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) " +
+	"Chrome/131.0.0.0 Safari/537.3";
 
 let browser: Browser | null = null;
 let page: Page | null = null;
 
 async function ensurePage(): Promise<Page> {
 	if (!browser) {
-		browser = await chromium.launch({ headless: true });
+		browser = await chromium.launch({
+			headless: false,
+			args: ["--disable-blink-features=AutomationControlled"],
+		});
 	}
 	if (!page || page.isClosed()) {
-		page = await browser.newPage();
+		page = await browser.newPage({ userAgent: USER_AGENT });
 		await page.route(ROUTE, (route) =>
 			route.fulfill({ contentType: "text/html", body: BLANK_HTML }),
 		);
@@ -23,6 +29,12 @@ async function ensurePage(): Promise<Page> {
 
 type BotGuardArgs = { script: string; prog: string; name: string };
 type MintArgs = { token: string; id: string };
+type PoTokenMinter = (id: Uint8Array) => Uint8Array | Promise<Uint8Array>;
+type PoTokenGlobal = Record<string, unknown> & {
+	__wpo?: unknown[];
+	__poTokenMinter?: PoTokenMinter;
+	__poTokenMinterIntegrityToken?: string;
+};
 
 export async function executeBotGuard(
 	interpreterScript: string,
@@ -78,21 +90,26 @@ export async function mintPoToken(integrityToken: string, identifier: string): P
 	const p = await ensurePage();
 	return p.evaluate(
 		async (args: MintArgs): Promise<string> => {
-			const g = globalThis as Record<string, unknown>;
-			const wpo = g.__wpo as unknown[];
-			const getMinter = wpo[0] as
-				| ((bytes: Uint8Array) => Promise<(id: Uint8Array) => Promise<Uint8Array>>)
-				| undefined;
-			if (!getMinter) throw new Error("PMD:Undefined");
+			const g = globalThis as PoTokenGlobal;
+			let mintFn = g.__poTokenMinter;
+			if (!mintFn || g.__poTokenMinterIntegrityToken !== args.token) {
+				const getMinter = g.__wpo?.[0] as
+					| ((bytes: Uint8Array) => PoTokenMinter | Promise<PoTokenMinter>)
+					| undefined;
+				if (!getMinter) throw new Error("PMD:Undefined");
 
-			const b64 = args.token.replace(/-/g, "+").replace(/_/g, "/").replace(/\./g, "=");
-			const tokenBytes = Uint8Array.from(
-				atob(b64)
-					.split("")
-					.map((c) => c.charCodeAt(0)),
-			);
-			const mintFn = await getMinter(tokenBytes);
-			if (!(mintFn instanceof Function)) throw new Error("APF:Failed");
+				const b64 = args.token.replace(/-/g, "+").replace(/_/g, "/").replace(/\./g, "=");
+				const tokenBytes = Uint8Array.from(
+					atob(b64)
+						.split("")
+						.map((c) => c.charCodeAt(0)),
+				);
+				const created = await getMinter(tokenBytes);
+				if (!(created instanceof Function)) throw new Error("APF:Failed");
+				mintFn = created as PoTokenMinter;
+				g.__poTokenMinter = mintFn;
+				g.__poTokenMinterIntegrityToken = args.token;
+			}
 
 			const result = await mintFn(new TextEncoder().encode(args.id));
 			if (!(result instanceof Uint8Array)) throw new Error("ODM:Invalid");
