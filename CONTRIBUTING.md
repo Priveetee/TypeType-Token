@@ -42,16 +42,24 @@ Check the current PipePipe Client and PipePipeExtractor sources before changing 
 
 Changes to an internal response must remain compatible with TypeType-Server. Coordinate the server contract in the same issue when both repositories need updates.
 
-## TypeScript expectations
+## Programming preferences
 
+- Use Bun exclusively. Do not use npm, yarn, or pnpm.
 - Do not use `any`.
 - Narrow `unknown` values before use.
 - Add explicit return types to exported functions.
+- Do not use wildcard imports.
+- Prefer clear names and structure over explanatory comments, but comments are welcome whenever a contributor finds them useful.
+- Name types and interfaces in PascalCase, files in kebab-case, functions in camelCase, constants in SCREAMING_SNAKE_CASE, and directories in lowercase.
+- Do not prefix interfaces with `I` or suffix implementations with `Impl`.
 - Keep strict TypeScript and Biome checks clean.
 - Keep source files under 170 lines and split by responsibility.
+- Keep one responsibility per file and do not mix HTTP routing, token orchestration, and BotGuard execution.
 - Preserve bounded caches, serialized refreshes, and per-video request isolation.
 - Add regression tests for refresh, concurrency, token binding, decoder, and session changes.
 - Do not add an HTTP framework or a second package manager.
+- Prefer Bun-native APIs before adding libraries, and do not add an external Redis client.
+- New dependencies must use MIT, ISC, or Apache-2.0 and preserve all required notices.
 - Do not place cookies, private keys, shared internal tokens, or captured account data in tests, issues, or pull requests.
 
 ## Required checks
