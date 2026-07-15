@@ -1,6 +1,6 @@
 services:
   typetype-token:
-    image: ghcr.io/priveetee/typetype-token:latest
+    image: ghcr.io/typetype-video/typetype-token:latest
     ports:
       - "8081:8081"
     restart: unless-stopped
