@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/Priveetee/TypeType/main/assets/banner.svg" alt="TypeType" width="100%">
+  <img src="https://raw.githubusercontent.com/TypeType-Video/TypeType/main/assets/banner.svg" alt="TypeType" width="100%">
   <h1>TypeType-Token</h1>
   <p>YouTube Proof-of-Origin token service for TypeType-Server.</p>
 </div>
@@ -142,16 +142,16 @@ Container tags are published to GHCR with:
 |---|---|
 | `latest` | Main branch builds |
 | `beta` | Dev branch beta builds |
-| `ghcr.io/priveetee/typetype-token-beta:latest` | Dev branch beta image |
+| `ghcr.io/typetype-video/typetype-token-beta:latest` | Dev branch beta image |
 | `sha-<short-sha>` | Every build |
 | `main` | Main branch |
 | `v*` | Git release tags |
 
 ## Related projects
 
-- [TypeType](https://github.com/Priveetee/TypeType) is the deployment stack.
-- [TypeType-Server](https://github.com/Priveetee/TypeType-Server) calls this service for token data.
-- [TypeType web](https://github.com/Priveetee/TypeType) never calls this service directly.
+- [TypeType](https://github.com/TypeType-Video/TypeType) is the central stack and issue tracker.
+- [TypeType-Server](https://github.com/TypeType-Video/TypeType-Server) calls this service for token data.
+- [TypeType-Frontend](https://github.com/TypeType-Video/TypeType-Frontend) never calls this service directly.
 
 ## Acknowledgments
 
