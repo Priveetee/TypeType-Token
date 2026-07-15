@@ -1,164 +1,78 @@
 <div align="center">
   <img src="https://raw.githubusercontent.com/TypeType-Video/TypeType/main/assets/banner.svg" alt="TypeType" width="100%">
-  <h1>TypeType-Token</h1>
-  <p>YouTube Proof-of-Origin token service for TypeType-Server.</p>
+  <h1>TypeType Token</h1>
+  <p>YouTube token, decoder, and session service for TypeType-Server.</p>
 </div>
 
-<div align="center">
+TypeType-Token is an internal Bun service used exclusively by [TypeType-Server](https://github.com/TypeType-Video/TypeType-Server). It handles YouTube Proof-of-Origin tokens, player decoding, SABR session metadata, subtitles, and disposable remote-login browser sessions.
 
-[![Runtime](https://img.shields.io/badge/runtime-Bun-fbf0df)](https://bun.sh)
-[![BotGuard](https://img.shields.io/badge/botguard-bgutils--js-222222)](https://github.com/LuanRT/BgUtils)
-[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+The frontend never calls this service directly. If you want to run TypeType, use the [central stack](https://github.com/TypeType-Video/TypeType) instead of exposing this service as a public API.
 
-</div>
+## Responsibilities
 
-TypeType-Token generates YouTube PO tokens and disposable YouTube login sessions for TypeType-Server. The frontend never calls this service directly.
+- Fetch YouTube visitor data and BotGuard challenges
+- Generate visitor-bound and video-bound PO tokens
+- Decode YouTube player signatures and throttling parameters locally
+- Return WEB and MWEB SABR session metadata to TypeType-Server
+- Resolve subtitle tracks with the required token data
+- Manage authenticated, disposable YouTube remote-login sessions
 
-It runs as a small Bun service inside the TypeType stack and is consumed over HTTP by the backend.
-
-## What this is
-
-A dedicated token microservice for the YouTube BotGuard and Proof-of-Origin flow.
-
-It fetches visitor data, runs BotGuard inside Playwright Chromium, generates integrity tokens, caches the browser attestation in memory, and returns PO token data to TypeType-Server.
-
-## What this is not
-
-- Not a public API for browsers.
-- Not a frontend dependency.
-- Not an extraction service.
-- Not a general YouTube client.
+TypeType does not rely on third-party decoder endpoints. Player decoding stays on the TypeType-owned service path.
 
 ## Stack
 
-| Role | Tool |
-|---|---|
-| Runtime | Bun |
+| Role | Technology |
+| --- | --- |
+| Runtime and package manager | Bun 1.3.14 |
 | HTTP server | `Bun.serve()` |
 | Browser runtime | Playwright Chromium |
-| BotGuard compatibility types | `bgutils-js` |
-| Cache | In-memory process cache |
+| Cache | In-memory BotGuard and token state |
 | Tests | `bun:test` |
 | Lint and format | Biome |
 
-## API
+## Internal API
 
-| Method | Path | Description |
-|---|---|---|
-| `GET` | `/potoken?videoId=<id>` | Returns PO token data for one YouTube video ID |
-| `GET` | `/subtitles?videoId=<id>` | Returns YouTube caption tracks with PO token injection |
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/health` | Service health |
+| `GET` | `/version` | Build information |
+| `GET` | `/potoken?videoId=<id>` | PO token data for a YouTube video |
+| `GET` | `/subtitles?videoId=<id>` | Subtitle track metadata |
+| `GET` | `/youtube/sabr/session?videoId=<id>&client=MWEB` | WEB or MWEB SABR session metadata |
+| `POST` | `/youtube/player/decoder` | Batch player URL decoding |
 
-Response shape:
-
-```json
-{
-  "poToken": "...",
-  "visitorData": "...",
-  "streamingPot": "..."
-}
-```
-
-Errors return HTTP `500` with:
-
-```json
-{ "error": "descriptive message" }
-```
-
-## Internal remote login
-
-Remote login is disabled by default and is only for TypeType-Server.
-
-| Method | Path | Description |
-|---|---|---|
-| `POST` | `/youtube-remote-login/start` | Starts one disposable Chromium context |
-| `GET` | `/youtube-remote-login/{sessionId}` | Internal WebSocket for frames and inputs |
-| `DELETE` | `/youtube-remote-login/{sessionId}` | Cancels and destroys the context |
-
-All remote login calls require:
-
-```text
-X-Internal-Token: <shared secret>
-```
-
-Start request:
-
-```json
-{
-  "serverSessionId": "...",
-  "userId": "...",
-  "callbackUrl": "http://typetype-server/internal/callback",
-  "ttlMs": 480000
-}
-```
-
-Completion is posted back to `callbackUrl` with cookies in Netscape format and the captured `poToken`. Cookies and `poToken` are not sent through the WebSocket.
-
-Remote login env:
-
-```text
-YOUTUBE_REMOTE_LOGIN_ENABLED=true
-YOUTUBE_REMOTE_LOGIN_INTERNAL_TOKEN=<shared secret>
-YOUTUBE_REMOTE_LOGIN_CALLBACK_ORIGIN=http://localhost:8080
-YOUTUBE_REMOTE_LOGIN_MAX_SESSIONS=2
-YOUTUBE_REMOTE_LOGIN_FRAME_FPS=10
-YOUTUBE_REMOTE_LOGIN_MAX_FRAME_BYTES=524288
-YOUTUBE_REMOTE_LOGIN_HEADLESS=false
-YOUTUBE_REMOTE_LOGIN_DISABLE_AUTOMATION_CONTROLLED=true
-YOUTUBE_REMOTE_LOGIN_PROBE_URL=https://music.youtube.com/watch?v=09839DpTctU
-YOUTUBE_REMOTE_LOGIN_BROWSER_CHANNEL=<optional chrome channel>
-YOUTUBE_REMOTE_LOGIN_USER_AGENT=<optional Chrome UA>
-```
-
-## Runtime
-
-Run from source:
-
-```bash
-bun run src/index.ts
-```
-
-Build and run the production bundle:
-
-```bash
-bun build src/index.ts --outfile dist/index.js --target bun
-bun dist/index.js
-```
-
-The service listens on port `8081`.
+Remote-login routes are disabled unless configured by the TypeType stack. They require a shared internal token and are intended only for the Server-to-Token connection.
 
 ## Development
 
-```bash
-bun install
-bun test
-bun run lint
+Requirements:
+
+- Bun 1.3.14
+- A Playwright-compatible Chromium installation for live token and login flows
+
+```sh
+bun install --frozen-lockfile
+bun run start
 ```
 
-## Docker tags
+The service listens on `http://localhost:8081`.
 
-Container tags are published to GHCR with:
+## Checks
 
-| Tag | Source |
-|---|---|
-| `latest` | Main branch builds |
-| `beta` | Dev branch beta builds |
-| `ghcr.io/typetype-video/typetype-token-beta:latest` | Dev branch beta image |
-| `sha-<short-sha>` | Every build |
-| `main` | Main branch |
-| `v*` | Git release tags |
+```sh
+bun run lint
+bun test
+bun run build
+```
+
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. Bug reports and feature requests belong in the [central issue tracker](https://github.com/TypeType-Video/TypeType/issues).
 
 ## Related projects
 
-- [TypeType](https://github.com/TypeType-Video/TypeType) is the central stack and issue tracker.
-- [TypeType-Server](https://github.com/TypeType-Video/TypeType-Server) calls this service for token data.
-- [TypeType-Frontend](https://github.com/TypeType-Video/TypeType-Frontend) never calls this service directly.
-
-## Acknowledgments
-
-- [deniscerri/ytdlnis](https://github.com/deniscerri/ytdlnis) for the BotGuard and PO token reference flow.
-- [LuanRT/BgUtils](https://github.com/LuanRT/BgUtils) for `bgutils-js`.
-- [yt-dlp](https://github.com/yt-dlp/yt-dlp) for Innertube compatibility references.
+- [TypeType-Server](https://github.com/TypeType-Video/TypeType-Server) consumes the internal service API.
+- [PipePipe](https://github.com/InfinityLoop1308/PipePipe) and [PipePipeExtractor](https://github.com/InfinityLoop1308/PipePipeExtractor) are the external behavioral references for YouTube extraction and SABR behavior.
+- [BgUtils](https://github.com/LuanRT/BgUtils) provides compatibility types used by the BotGuard integration.
 
 ## License
 
-MIT. See [LICENSE](LICENSE). See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for dependency notices.
+TypeType-Token is licensed under the [MIT License](LICENSE). Dependency notices are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
