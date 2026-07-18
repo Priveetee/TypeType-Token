@@ -1,5 +1,5 @@
 import { buildSabrFormat } from "googlevideo/utils";
-import Innertube, { ClientType, Platform, UniversalCache, YTNodes } from "youtubei.js";
+import { Platform, YTNodes } from "youtubei.js";
 import { KeyedSingleFlight } from "./keyed-single-flight.ts";
 import { fetchPoToken } from "./token-service.ts";
 import { findYoutubeChannelAvatarUrl } from "./youtube-channel-avatar.ts";
@@ -7,17 +7,15 @@ import {
 	cacheYoutubeChannelAvatar,
 	getCachedYoutubeChannelAvatar,
 } from "./youtube-channel-avatar-cache.ts";
+import {
+	getYoutubeInnertube,
+	invalidateYoutubeInnertube,
+	isRejectedAnonymousSession,
+	type YoutubeInnertube,
+} from "./youtube-innertube-session.ts";
 import { toYoutubeSabrAdaptiveFormat } from "./youtube-sabr-adaptive-format.ts";
 import type { YoutubeSabrClient, YoutubeSabrSession } from "./youtube-sabr-types.ts";
 
-type YoutubeInnertube = Awaited<ReturnType<typeof Innertube.create>>;
-
-type SharedInnertube = {
-	visitorData: string;
-	pending: Promise<YoutubeInnertube>;
-};
-
-const innertubeByClient = new Map<YoutubeSabrClient, SharedInnertube>();
 const sessionRequests = new KeyedSingleFlight<string, YoutubeSabrSession>();
 
 function installPlatformShim(): void {
@@ -36,33 +34,39 @@ export async function fetchYoutubeSabrSession(
 	return sessionRequests.run(`${client}:${videoId}`, () => loadYoutubeSabrSession(videoId, client));
 }
 
-async function getInnertube(
-	client: YoutubeSabrClient,
-	visitorData: string,
-): Promise<YoutubeInnertube> {
-	const shared = innertubeByClient.get(client);
-	if (shared?.visitorData === visitorData) return shared.pending;
-	const pending = Innertube.create({
-		cache: new UniversalCache(true),
-		client_type: client === "MWEB" ? ClientType.MWEB : ClientType.WEB,
-		visitor_data: visitorData,
-	});
-	innertubeByClient.set(client, { visitorData, pending });
-	try {
-		return await pending;
-	} catch (error) {
-		if (innertubeByClient.get(client)?.pending === pending) innertubeByClient.delete(client);
-		throw error;
-	}
-}
-
 async function loadYoutubeSabrSession(
 	videoId: string,
 	client: YoutubeSabrClient,
 ): Promise<YoutubeSabrSession> {
 	const tokens = await fetchPoToken(videoId);
 	installPlatformShim();
-	const innertube = await getInnertube(client, tokens.visitorData);
+	let innertube = await getYoutubeInnertube(client, tokens.visitorData);
+	let responses = await fetchYoutubeResponses(videoId, innertube, tokens.visitorBoundPoToken);
+	const playability = responses.videoInfo.playability_status;
+	if (isRejectedAnonymousSession(playability?.status, playability?.reason)) {
+		await invalidateYoutubeInnertube(client, tokens.visitorData, innertube);
+		innertube = await getYoutubeInnertube(client, tokens.visitorData);
+		responses = await fetchYoutubeResponses(videoId, innertube, tokens.visitorBoundPoToken);
+	}
+	const { videoInfo, nextResponse } = responses;
+	if (videoInfo.playability_status?.status !== "OK") {
+		throw new Error(
+			`YouTube ${client} player response is ${videoInfo.playability_status?.status ?? "missing"}: ${videoInfo.playability_status?.reason ?? "no reason"}`,
+		);
+	}
+
+	const cachedChannelAvatarUrl = getCachedYoutubeChannelAvatar(videoId);
+	const channelAvatarUrl =
+		cachedChannelAvatarUrl ?? findYoutubeChannelAvatarUrl(nextResponse?.data);
+	cacheYoutubeChannelAvatar(videoId, channelAvatarUrl);
+	return buildYoutubeSabrSession(videoId, client, tokens, innertube, videoInfo, channelAvatarUrl);
+}
+
+async function fetchYoutubeResponses(
+	videoId: string,
+	innertube: YoutubeInnertube,
+	poToken: string,
+) {
 	const endpoint = new YTNodes.NavigationEndpoint({ watchEndpoint: { videoId } });
 	const nextEndpoint = new YTNodes.NavigationEndpoint({ watchNextEndpoint: { videoId } });
 	const cachedChannelAvatarUrl = getCachedYoutubeChannelAvatar(videoId);
@@ -77,7 +81,7 @@ async function loadYoutubeSabrSession(
 					signatureTimestamp: innertube.session.player?.signature_timestamp,
 				},
 			},
-			serviceIntegrityDimensions: { poToken: tokens.streamingPot },
+			serviceIntegrityDimensions: { poToken },
 			contentCheckOk: true,
 			racyCheckOk: true,
 			parse: true,
@@ -86,11 +90,17 @@ async function loadYoutubeSabrSession(
 			? Promise.resolve(null)
 			: nextEndpoint.call(innertube.actions, { parse: false }).catch(() => null),
 	]);
-	if (videoInfo.playability_status?.status !== "OK") {
-		throw new Error(
-			`YouTube ${client} player response is ${videoInfo.playability_status?.status ?? "missing"}: ${videoInfo.playability_status?.reason ?? "no reason"}`,
-		);
-	}
+	return { videoInfo, nextResponse };
+}
+
+async function buildYoutubeSabrSession(
+	videoId: string,
+	client: YoutubeSabrClient,
+	tokens: Awaited<ReturnType<typeof fetchPoToken>>,
+	innertube: YoutubeInnertube,
+	videoInfo: Awaited<ReturnType<YTNodes.NavigationEndpoint["call"]>>,
+	channelAvatarUrl: string,
+): Promise<YoutubeSabrSession> {
 	const serverAbrStreamingUrl = await innertube.session.player?.decipher(
 		videoInfo.streaming_data?.server_abr_streaming_url,
 	);
@@ -112,9 +122,6 @@ async function loadYoutubeSabrSession(
 		toYoutubeSabrAdaptiveFormat(format),
 	);
 	const details = videoInfo.video_details;
-	const channelAvatarUrl =
-		cachedChannelAvatarUrl ?? findYoutubeChannelAvatarUrl(nextResponse?.data);
-	cacheYoutubeChannelAvatar(videoId, channelAvatarUrl);
 	const metadata = {
 		title: details?.title ?? "",
 		author: details?.author ?? "",

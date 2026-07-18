@@ -1,4 +1,5 @@
 import { Constants } from "youtubei.js";
+import { youtubeFetch } from "./youtube-fetch.ts";
 
 export const WEB_CLIENT_VERSION = Constants.CLIENTS.WEB.VERSION;
 const ATT_GET_URL = "https://www.youtube.com/youtubei/v1/att/get?prettyPrint=false";
@@ -36,7 +37,7 @@ async function resolveInterpreterScript(challenge: AttGetChallenge): Promise<str
 	}
 
 	const url = rawUrl.startsWith("//") ? `https:${rawUrl}` : rawUrl;
-	const response = await fetch(url);
+	const response = await youtubeFetch(url);
 	if (!response.ok) {
 		throw new Error(`BotGuard interpreter fetch failed: ${response.status}`);
 	}
@@ -50,7 +51,7 @@ async function resolveInterpreterScript(challenge: AttGetChallenge): Promise<str
 }
 
 export async function fetchChallenge(visitorData: string): Promise<BotGuardChallenge> {
-	const response = await fetch(ATT_GET_URL, {
+	const response = await youtubeFetch(ATT_GET_URL, {
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",

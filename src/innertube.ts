@@ -1,5 +1,6 @@
 import type { IntegrityTokenData } from "bgutils-js";
 import { WEB_CLIENT_VERSION } from "./botguard-challenge.ts";
+import { youtubeFetch } from "./youtube-fetch.ts";
 
 const INNERTUBE_API_KEY = "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8";
 const WAA_API_KEY = "AIzaSyDyT5W0Jh49F30Pqqtyfdf7pDLFKLJoAnw";
@@ -23,7 +24,7 @@ const WAA_HEADERS: Record<string, string> = {
 };
 
 export async function fetchVisitorData(): Promise<string> {
-	const response = await fetch(
+	const response = await youtubeFetch(
 		`https://www.youtube.com/youtubei/v1/config?key=${INNERTUBE_API_KEY}`,
 		{
 			method: "POST",
@@ -75,7 +76,7 @@ export async function fetchCaptionTracks(
 	visitorData: string,
 	poToken: string,
 ): Promise<RawCaptionTrack[]> {
-	const response = await fetch(
+	const response = await youtubeFetch(
 		`https://www.youtube.com/youtubei/v1/player?key=${INNERTUBE_API_KEY}`,
 		{
 			method: "POST",
@@ -118,7 +119,7 @@ export async function fetchCaptionTracks(
 }
 
 export async function fetchIntegrityToken(botguardResponse: string): Promise<IntegrityTokenData> {
-	const response = await fetch(`${WAA_BASE_URL}/GenerateIT`, {
+	const response = await youtubeFetch(`${WAA_BASE_URL}/GenerateIT`, {
 		method: "POST",
 		headers: WAA_HEADERS,
 		body: JSON.stringify([REQUEST_KEY, botguardResponse]),

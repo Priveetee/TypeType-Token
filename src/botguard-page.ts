@@ -51,6 +51,8 @@ export async function executeBotGuard(
 
 			let asyncSnapshotFn: ((...a: unknown[]) => void) | undefined;
 			const wpo: unknown[] = [];
+			const noOp = () => undefined;
+			const loggerFunctions = [noOp, noOp, noOp, noOp, noOp];
 
 			vm.a(
 				args.prog,
@@ -59,8 +61,11 @@ export async function executeBotGuard(
 				},
 				true,
 				undefined,
-				() => undefined,
+				noOp,
 				[[], []],
+				undefined,
+				false,
+				loggerFunctions,
 			);
 
 			const af = await new Promise<(...a: unknown[]) => void>((resolve, reject) => {
