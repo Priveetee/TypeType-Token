@@ -1,5 +1,5 @@
 import { buildSabrFormat } from "googlevideo/utils";
-import { Platform, YTNodes } from "youtubei.js";
+import { YTNodes } from "youtubei.js";
 import { KeyedSingleFlight } from "./keyed-single-flight.ts";
 import { fetchPoToken } from "./token-service.ts";
 import { findYoutubeChannelAvatarUrl } from "./youtube-channel-avatar.ts";
@@ -18,15 +18,6 @@ import type { YoutubeSabrClient, YoutubeSabrSession } from "./youtube-sabr-types
 
 const sessionRequests = new KeyedSingleFlight<string, YoutubeSabrSession>();
 
-function installPlatformShim(): void {
-	Platform.shim.eval = async (data, env) => {
-		const properties = [];
-		if (env.n) properties.push(`n: exportedVars.nFunction("${env.n}")`);
-		if (env.sig) properties.push(`sig: exportedVars.sigFunction("${env.sig}")`);
-		return new Function(`${data.output}\nreturn { ${properties.join(", ")} }`)();
-	};
-}
-
 export async function fetchYoutubeSabrSession(
 	videoId: string,
 	client: YoutubeSabrClient = "MWEB",
@@ -39,7 +30,6 @@ async function loadYoutubeSabrSession(
 	client: YoutubeSabrClient,
 ): Promise<YoutubeSabrSession> {
 	const tokens = await fetchPoToken(videoId);
-	installPlatformShim();
 	let innertube = await getYoutubeInnertube(client, tokens.visitorData);
 	let responses = await fetchYoutubeResponses(videoId, innertube, tokens.visitorBoundPoToken);
 	const playability = responses.videoInfo.playability_status;
