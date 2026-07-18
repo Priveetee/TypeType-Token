@@ -1,4 +1,5 @@
 import Innertube, { UniversalCache } from "youtubei.js";
+import { installYoutubePlayerEvaluator } from "./youtube-player-evaluator.ts";
 
 type YoutubeInnertube = Awaited<ReturnType<typeof Innertube.create>>;
 
@@ -23,6 +24,7 @@ function safeValues(values: string[] | undefined): string[] {
 }
 
 async function getInnertube(playerId: string | undefined): Promise<YoutubeInnertube> {
+	installYoutubePlayerEvaluator();
 	if (playerId && loadedPlayerId && playerId !== loadedPlayerId) {
 		innertubePromise = undefined;
 		loadedPlayerId = undefined;

@@ -1,5 +1,6 @@
 import Innertube, { ClientType, UniversalCache } from "youtubei.js";
 import { youtubeFetch } from "./youtube-fetch.ts";
+import { installYoutubePlayerEvaluator } from "./youtube-player-evaluator.ts";
 import type { YoutubeSabrClient } from "./youtube-sabr-types.ts";
 
 export type YoutubeInnertube = Awaited<ReturnType<typeof Innertube.create>>;
@@ -43,14 +44,15 @@ export class YoutubeInnertubeSessions<Session> {
 	}
 }
 
-const sessions = new YoutubeInnertubeSessions<YoutubeInnertube>(async (client, visitorData) =>
-	Innertube.create({
+const sessions = new YoutubeInnertubeSessions<YoutubeInnertube>(async (client, visitorData) => {
+	installYoutubePlayerEvaluator();
+	return Innertube.create({
 		cache: new UniversalCache(true),
 		client_type: client === "MWEB" ? ClientType.MWEB : ClientType.WEB,
 		fetch: youtubeFetch,
 		visitor_data: visitorData,
-	}),
-);
+	});
+});
 
 export async function getYoutubeInnertube(
 	client: YoutubeSabrClient,
