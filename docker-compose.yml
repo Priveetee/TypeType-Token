@@ -8,6 +8,7 @@ services:
     ipc: host
     environment:
       - NODE_ENV=production
+      - YOUTUBE_OUTBOUND_PROXY_URL=${YOUTUBE_OUTBOUND_PROXY_URL:-}
     healthcheck:
       test: ["CMD", "bun", "-e", "fetch('http://localhost:8081/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 30s

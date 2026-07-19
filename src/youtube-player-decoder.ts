@@ -1,4 +1,5 @@
-import Innertube, { Platform, UniversalCache } from "youtubei.js";
+import Innertube, { UniversalCache } from "youtubei.js";
+import { installYoutubePlayerEvaluator } from "./youtube-player-evaluator.ts";
 
 type YoutubeInnertube = Awaited<ReturnType<typeof Innertube.create>>;
 
@@ -18,20 +19,12 @@ export type YoutubePlayerDecodeResponse = {
 	throttlingParameters: Record<string, string>;
 };
 
-function installPlatformShim(): void {
-	Platform.shim.eval = async (data, env) => {
-		const properties = [];
-		if (env.n) properties.push(`n: exportedVars.nFunction("${env.n}")`);
-		if (env.sig) properties.push(`sig: exportedVars.sigFunction("${env.sig}")`);
-		return new Function(`${data.output}\nreturn { ${properties.join(", ")} }`)();
-	};
-}
-
 function safeValues(values: string[] | undefined): string[] {
 	return Array.isArray(values) ? values.filter((value) => typeof value === "string") : [];
 }
 
 async function getInnertube(playerId: string | undefined): Promise<YoutubeInnertube> {
+	installYoutubePlayerEvaluator();
 	if (playerId && loadedPlayerId && playerId !== loadedPlayerId) {
 		innertubePromise = undefined;
 		loadedPlayerId = undefined;
@@ -51,7 +44,6 @@ async function getInnertube(playerId: string | undefined): Promise<YoutubeInnert
 export async function decodeYoutubePlayerBatch(
 	request: YoutubePlayerDecodeRequest,
 ): Promise<YoutubePlayerDecodeResponse> {
-	installPlatformShim();
 	const innertube = await getInnertube(request.playerId);
 	const player = innertube.session.player;
 	if (!player) throw new Error("YouTube player is unavailable");
